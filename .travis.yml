@@ -28,8 +28,8 @@ script:
             if make; then
                rc=0;
             else
-               rc=${?}
+               rc=${?};
             fi
          ;;
-      esac
+      esac;
       exit ${rc}
