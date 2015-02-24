@@ -1,0 +1,35 @@
+language: c
+
+sudo: false
+
+compiler:
+   - gcc
+   - clang
+
+env:
+   global:
+      - STATIC=1
+   matrix:
+      - S=init
+      - S=overlay
+      - S=standalone
+
+script:
+   -  cd ${S}
+   -  rc=22;
+      case "${S}" in
+         init)
+            make STATIC=${STATIC} && rc=0 || rc=${?}
+         ;;
+         standalone)
+            make && rc=0 || rc=${?}
+         ;;
+         overlay)
+            if make; then
+               rc=0;
+            else
+               rc=${?}
+            fi
+         ;;
+      esac
+      exit ${rc}
