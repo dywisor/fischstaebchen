@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+#  This is a dummy script.
+#
+#  Configuration is done by writing your preferences to a "config.h" file
+#  and pass it to make via LOCALCONFIG="config.h".
+#
+exit 0
