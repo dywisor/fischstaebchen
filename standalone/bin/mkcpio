@@ -1,0 +1,63 @@
+#!/bin/sh
+: ${X_CPIO:?}
+: ${OVERLAY_O_FAKEROOTD:?}
+: ${1:?}
+set -xeu
+D="${PWD}"
+umask 0022
+
+dodir() { mkdir -p -- "${@}" || exit; }
+# donod ( type, name, maj, min, mode:="0600", uid:="0", gid:="0" )
+donod() {
+   local node
+   node="${D%/}/dev/${2:?}"
+
+   case "${1?}" in
+      'b'|'c') true ;;
+      *) exit 64 ;;
+   esac
+
+   rm -f -- "${node}"
+   mknod -m "${5:-0600}" "${node}" "${1:?}" "${3:?}" "${4:?}" || return
+   [ -z "${6-}${7-}" ] || chown "${6:--0}:${7:--0}" "${node}" || return
+}
+
+__with_broken__() {
+   [ "${WITH_BROKEN:?}" = "1" ]
+}
+
+rm_hookfile() {
+   local filepath
+
+   filepath="${D%/}/init.d/hooks/functions.d/${1:?}"
+
+   if test -f "${filepath}"; then
+      printf  "%s\n"  "Removing file: ${filepath}"
+      rm -- "${filepath}"
+   fi
+}
+
+# doblk ( name, maj, min, [mode], [uid], [gid] )
+doblk() { donod b "${@}"; }
+# dochr ( name, maj, min, [mode], [uid], [gid] )
+dochr() { donod c "${@}"; }
+
+if [ -d "${OVERLAY_O_FAKEROOTD}" ]; then
+   for fscript in "${OVERLAY_O_FAKEROOTD}/"*; do
+      if [ -f "${fscript}" ]; then
+         case "${fscript}" in
+            *.sh)
+               ( . "${fscript}"; )
+            ;;
+            *)
+               "${fscript}"
+            ;;
+         esac
+
+         #rm -f -- "${fscript}"
+      fi
+   done
+fi
+
+find . -print0 | \
+   ${X_CPIO} --null -ov --format=newc --owner=0:0 > "${1}"
