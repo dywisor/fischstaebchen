@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
+from __future__ import unicode_literals, division, generators
+from __future__ import print_function, nested_scopes, with_statement
+
+import argparse
+import os
+import sys
+import errno
+
+def readfiles ( flist, ignore_missing, finfo_stream ):
+   write_finfo_stream = None if finfo_stream is None else finfo_stream.write
+
+   for f in flist:
+      try:
+         with open ( f, 'rt' ) as fh:
+            if write_finfo_stream is not None:
+               write_finfo_stream ( ('>>> ' + str(f) + os.linesep) )
+
+            for lino, line in enumerate(fh):
+               yield ( lino, line )
+
+      except IOError as ioerr:
+         if not ignore_missing or getattr(ioerr, 'errno') != errno.ENOENT:
+            raise
+# --- end of readfiles (...) ---
+
+def mergefiles ( *args, **kwargs ):
+   have_hashbang   = False
+   prev_line_empty = True
+
+   for lino, line in readfiles ( *args, **kwargs ):
+      rsline = line.rstrip()
+      sline  = rsline.lstrip()
+
+      if not lino:
+         if not prev_line_empty:
+            yield os.linesep
+            prev_line_empty = True
+         # --
+
+         if rsline[:2] == '#!':
+            if have_hashbang: continue
+            have_hashbang = True
+
+         elif not have_hashbang:
+            yield ( '#!/bin/sh' + os.linesep )
+            have_hashbang = True
+      # --
+
+      if not rsline:
+         if prev_line_empty: continue
+         prev_line_empty = True
+
+      elif sline[:2] == '##':
+         # strip comment lines starting with
+         # [any whitespace sequence followed by] exactly 2 '#' chars
+
+         if len(sline) < 3 or sline[2] != '#': continue ## latch
+         prev_line_empty = False
+      else:
+         prev_line_empty = False
+      # --
+
+      yield line
+   # --
+# --- end of mergefiles (...) ---
+
+if __name__ == '__main__':
+   parser = argparse.ArgumentParser()
+   parser.add_argument ( 'infiles', nargs='+', metavar='<file>' )
+   parser.add_argument ( '-O', '--outfile',
+      metavar='<file>', default='-', type=argparse.FileType('w')
+   )
+   parser.add_argument ( '-e', '--ifexist',
+      dest='ignore_missing', default=False, action='store_true'
+   )
+
+   config = parser.parse_args()
+   config.outfile.write (
+      ''.join (
+         mergefiles(config.infiles, config.ignore_missing, None)
+      )
+   )
+# --

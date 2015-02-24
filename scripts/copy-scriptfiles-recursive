@@ -1,0 +1,85 @@
+#!/bin/sh
+set -u
+set -e
+
+case "${1-}" in
+   '-x'|'--xtrace') shift && set -x || exit ;;
+esac
+
+# copy_shfile ( src, dstdir, relsrc )
+#
+copy_shfile() {
+   : ${1:?} ${2:?} ${3:?}
+   local guard
+   local guard_name
+
+   guard_name="$( printf  '%s' "${3}" | \
+      sed -r \
+         -e 's=(.*[/])?([0-9]+[-])?([^/]+)[.]sh=\1\3=' \
+         -e 's=[/.-]+=__=g' | \
+         tr '[:lower:]' '[:upper:'] )"
+   : ${guard_name:?}
+
+
+   guard="__HAVE_IFUNC_${guard_name}__"
+
+   {
+      printf  '%s\n\n'     "if [ -z \"\${${guard}-}\" ]; then" && \
+      cat "${1}" && \
+      printf  '\n%s\n%s\n' "${guard}=y" "fi"
+   } > "${2}"
+}
+
+copy_shfiles() {
+   : ${1:?} ${2:?} ${3?}
+   local srcdstroot
+   local relsrcroot
+
+   local src
+   local srcname
+   local srcdst
+   local relsrc
+
+   srcdstroot="${2%/}"; srcdstroot="${srcdstroot:?}/"
+   relsrcroot="${3%/}"
+   [ -z "${relsrcroot}" ] || relsrcroot="${relsrcroot}/"
+
+   for src in "${1:?}/"*; do
+      test -e "${src}" || continue
+
+      srcname="${src##*/}"
+      relsrc="${relsrcroot}${srcname}"
+      srcdst="${srcdstroot}${srcname}"
+
+      if test -h "${src}"; then
+         printf  '%s\n' "Cannot handle symlink: ${src}" 1>&2
+         return 9
+
+      elif test -d "${src}"; then
+         # dir: resolve by recursion
+         copy_shfiles "${src}" "${srcdst}" "${relsrc}" || return
+
+      elif test -f "${src}"; then
+         # file: copy if not empty
+         if test -s "${src}"; then
+            mkdir -p -- "${srcdstroot}" && \
+            copy_shfile "${src}" "${srcdst}" "${relsrc}" || return
+#         else
+#            rm -f -- "${srcdst}"
+         fi
+
+      else
+         printf  '%s\n' "Cannot non-file/dir: ${src}" 1>&2
+         return 9
+      fi
+   done
+}
+
+SRCROOT="${1:?}"; shift
+SRCROOT="${SRCROOT%/}"; : ${SRCROOT:?}
+
+DSTROOT="${1:?}"; shift
+DSTROOT="${DSTROOT%/}"; : ${DSTROOT:?}
+
+
+copy_shfiles "${SRCROOT}" "${DSTROOT}" ""

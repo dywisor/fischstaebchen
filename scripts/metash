@@ -1,0 +1,2437 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#  very hacky script for converting "meta" shell scripts into regular ones
+#
+
+from __future__ import absolute_import
+from __future__ import unicode_literals, division, generators
+from __future__ import print_function, nested_scopes, with_statement
+
+import argparse
+import collections
+import os
+import sys
+import re
+import math
+import shlex
+import string
+
+_string_types = ( str, )
+
+def get_dec_int_digit_len ( n ):
+   if not n:
+      return 1
+   elif n > 0:
+      return int ( math.log10 ( n ) ) + 1
+   else:
+      return int ( math.log10 ( -n ) ) + 2
+
+
+class UndefinedValueError ( ValueError ):
+   pass
+
+class ShellMacroError ( ValueError ):
+   pass
+
+class ShellMacroNotDefinedError ( ShellMacroError ):
+   pass
+
+class ShellMacroExpansionError ( ShellMacroError ):
+   pass
+
+class InstructionError ( ValueError ):
+   pass
+
+class BadInstructionError ( InstructionError ):
+   pass
+
+
+class VarsDict ( collections.UserDict ):
+   def __init__ ( self, data=None, parent_vars=None ):
+      super ( VarsDict, self ).__init__ ( data or {} )
+      self.parent_vars = parent_vars
+
+   def has_own ( self, key ):
+      return key in self.data
+
+   def __getitem__ ( self, key ):
+      try:
+         return super ( VarsDict, self ).__getitem__ ( key )
+      except KeyError:
+         if self.parent_vars is not None:
+            try:
+               return self.parent_vars [key]
+            except KeyError:
+               pass
+         raise
+
+   def weakdef ( self, key, value ):
+      if key not in self:
+         self [key] = value
+
+   def weakdef_own ( self, key, value ):
+      if key not in self.data:
+         self [key] = value
+
+   def get_dereference ( self, key ):
+      ref = self.__getitem__ ( key )
+      return ref ( self ) if hasattr ( ref, '__call__' ) else ref
+
+   def fork ( self ):
+      return self.__class__ ( data=self.data, parent_vars=self )
+
+
+
+class SymbolReference ( object ):
+   def __init__ ( self, name, line_position, matched_text ):
+      super ( SymbolReference, self ).__init__()
+      self.name         = name
+      self.pos          = line_position
+      self.value        = None
+      self.matched_text = matched_text
+
+   def has_value ( self ):
+      return self.value is not None
+
+   def assign_from ( self, varsdict ):
+      self.value = varsdict.get_dereference ( self.name )
+
+   def get_value ( self ):
+      val = self.value
+
+      if val is None:
+         raise UndefinedValueError ( self.name )
+      elif hasattr ( val, '__call__' ):
+         return val()
+      else:
+         return val
+
+   def get_str_value ( self ):
+      return str ( self.get_value() )
+
+   __str__ = get_str_value
+
+
+class MetavarReference ( SymbolReference ):
+
+   def __repr__ ( self ):
+      return 'Metavar({!r})'.format(self.name)
+
+
+
+
+class MetavarTextLine ( object ):
+   def __init__ ( self ):
+      super ( MetavarTextLine, self ).__init__()
+      self.metavar_refs    = []
+      self.line_components = []
+
+      self.add_line_component   = self.line_components.append
+      self.register_metavar_ref = self.metavar_refs.append
+
+   def add_metavar_ref ( self, metavar_ref ):
+      self.register_metavar_ref ( metavar_ref )
+      self.add_line_component   ( metavar_ref )
+
+   def add_line_component_skip_empty ( self, text ):
+      if text:
+         self.add_line_component ( text )
+
+   def add_create_metavar_ref ( self, *args, **kwargs ):
+      self.add_metavar_ref ( MetavarReference ( *args, **kwargs ) )
+
+   def gen_str ( self ):
+      return map ( str, self.line_components )
+
+   def __str__ ( self ):
+      return ''.join ( self.gen_str() )
+
+   def iassign_from ( self, metavars_dict ):
+      for metavar_ref in self.metavar_refs:
+         try:
+            metavar_ref.assign_from ( metavars_dict )
+         except KeyError:
+            yield metavar_ref
+
+   def assign_from ( self, metavars_dict ):
+      return list ( self.iassign_from ( metavars_dict ) )
+
+
+
+def strip_newline ( s ):
+   if not s:
+      return s
+   elif s[-1] == '\r':
+      return s[:-1]
+   elif s[-1] == '\n':
+      try:
+         if s[-2] == '\r':
+            return s[:-2]
+      except IndexError:
+         pass
+
+      return s[:-1]
+   else:
+      return s
+
+class FileReaderInstruction ( object ):
+
+   #if[n]def  METAVAR              [METAVAR in metavars_dict]
+   #if[not]   METAVAR              [bool(str(METAVAR))]
+   #bif[not]  METAVAR              [str(METAVAR) in TRUE_WORDS]
+   #endif
+   op_if_defined           = 0x00
+   op_if_not_defined       = 0x01
+   op_if                   = 0x02
+   op_if_not               = 0x03
+   op_if_bool              = 0x04
+   op_if_not_bool          = 0x05
+   op_if_else_if           = 0x06
+   op_if_else              = 0x07
+   op_if_end               = 0x0f
+
+   #undef        METAVAR
+   #define       METAVAR [VALUE]      [one-line def]
+   #weakdef      METAVAR [VALUE]      [ifdef _ define _ _ endif]
+   #weakblockdef METAVAR <NEWLINE>...
+   #blockdef     METAVAR <NEWLINE>...
+   #endef
+   op_undef                = 0x10
+   op_define               = 0x11
+   op_define_weak          = 0x12
+   op_define_block         = 0x13
+   op_define_block_weak    = 0x14
+   op_define_end           = 0x1f
+
+   # <%_ ...%> => <%...%>
+   op_echo                 = 0x20
+   op_noread               = 0x21
+   op_read                 = 0x22
+
+   #include
+   #%BUILTIN  [ARGS...]
+   op_include              = 0x30
+   op_builtin              = 0x31
+
+
+   #
+   #(newscope, newscope_empty, endscope)
+
+   INSTRUCTION_KEYWORDS = {
+      'ifdef'        : op_if_defined,           ## NOT IMPLEMENTED
+      'ifndef'       : op_if_not_defined,       ## NOT IMPLEMENTED
+      'if'           : op_if,                   ## PARTIALLY IMPLEMENTED
+      'ifnot'        : op_if_not,               ## NOT IMPLEMENTED
+      'bif'          : op_if_bool,              ## NOT IMPLEMENTED
+      'bifnot'       : op_if_not_bool,          ## NOT IMPLEMENTED
+      'elseif'       : op_if_else_if,           ## PARTIALLY IMPLEMENTED
+      'else'         : op_if_else,
+      'endif'        : op_if_end,               ## NOT IMPLEMENTED
+
+      'undef'        : op_undef,                ## NOT IMPLEMENTED
+      'define'       : op_define,
+      'weakdef'      : op_define_weak,
+      'blockdef'     : op_define_block,         ## NOT IMPLEMENTED
+      'weakblockdef' : op_define_block_weak,    ## NOT IMPLEMENTED
+      'endef'        : op_define_end,           ## NOT IMPLEMENTED
+
+      '_'            : op_echo,                 ## NOT IMPLEMENTED
+      'noread'       : op_noread,               ## NOT IMPLEMENTED
+      'read'         : op_read,                 ## NOT IMPLEMENTED
+
+      'include'      : op_include,              ## NOT IMPLEMENTED
+      'builtin'      : op_builtin,
+   }
+
+   _if_end  = [ op_if_else, op_if_else_if, op_if_end ]
+   _def_end = [ op_define_end ]
+
+   INSTRUCTION_BLOCK_END_MAP = {
+      op_if_defined        : _if_end,
+      op_if_not_defined    : _if_end,
+      op_if                : _if_end,
+      op_if_not            : _if_end,
+      op_if_bool           : _if_end,
+      op_if_not_bool       : _if_end,
+      op_if_else_if        : [ op_if_else, op_if_end ],
+      op_if_else           : [ op_if_end ],
+
+      op_define_block      : _def_end,
+      op_define_block_weak : _def_end,
+
+      op_noread            : [ op_read ],
+   }
+
+   del _def_end, _if_end
+
+   @classmethod
+   def new_from_keyword ( cls, keyword, args, line_indent, line_remainder ):
+      return cls (
+         cls.INSTRUCTION_KEYWORDS [keyword], args, line_indent, line_remainder
+      )
+
+   def __init__ ( self, opcode, args, line_indent, line_remainder ):
+      super ( FileReaderInstruction, self ).__init__()
+      self.opcode         = opcode
+      self.args           = args
+      self.line_indent    = line_indent
+      self.line_remainder = line_remainder
+      self.end_codes      = self.INSTRUCTION_BLOCK_END_MAP.get(opcode)
+
+   def get_block_end ( self ):
+      return self.__class__.INSTRUCTION_BLOCK_END_MAP [self.opcode]
+
+
+class FileReader ( object ):
+   def _iread_file_lines ( self, filepath ):
+      if filepath == '-':
+         for line in sys.stdin: yield line
+      elif not isinstance ( filepath, _string_types ):
+         for line in filepath: yield line
+      else:
+         with open ( filepath, 'rt' ) as fh:
+            for line in fh: yield line
+
+   def xform_file_line ( self, line ):
+      return strip_newline ( line )
+
+   def iread_file_lines ( self, *args, **kwargs ):
+      return map (
+         self.xform_file_line,
+         self._iread_file_lines ( *args, **kwargs )
+      )
+
+
+class FileReaderIfBlock ( object ):
+
+   def __init__ ( self, forced_blind ):
+      super ( FileReaderIfBlock, self ).__init__()
+      self.instructions  = [] ## for dbg/info
+      self._allowed_ops  = [ FileReaderInstruction.op_if ]
+      self.is_blind      = None
+      self.is_closed     = None
+      self._was_matched  = False
+      self._forced_blind = forced_blind
+
+   def _parse_if_instruction (
+      self, visible_metavars, lino, input_line, instruction
+   ):
+      args = instruction.args.split ( None )
+      if len(args) != 1 or not args[0]:
+         raise BadInstructionError (
+            lino, input_line,
+            "exactly one arg accepted (only partially implemented)"
+         )
+      # --
+
+      return self._parse_conditional (
+         visible_metavars, lino, input_line, instruction, args[0]
+      )
+   # --- end of parse_if_instruction (...) ---
+
+   def _parse_conditional (
+      self, visible_metavars, lino, input_line, instruction, arg
+   ):
+      varname_arg = arg.lstrip("!")
+      negate      = bool ( ( len(arg) - len(varname_arg) ) % 2 )
+
+      varname, has_default, default_value = varname_arg.partition("=")
+      if varname and varname[-1] == ':': varname = varname[:-1]
+
+      if not varname:
+         raise BadInstructionError ( lino, input_line, "bad name" )
+      # --
+
+      if varname in visible_metavars:
+         svalue = visible_metavars [varname]
+
+      elif has_default:
+         svalue = default_value
+
+      else:
+         raise BadInstructionError (
+            lino, input_line, "not defined: " + varname
+         )
+      # --
+
+      block_is_blind = bool (
+         svalue.lower() in { '', 'n', '0', 'no', 'false', 'disabled' }
+      )
+
+      return (not block_is_blind) if negate else block_is_blind
+   # --- end of _parse_conditional (...) ---
+
+   def accepts ( self, instruction ):
+      return instruction.opcode in self._allowed_ops
+
+   def update ( self, visible_metavars, lino, input_line, instruction ):
+      #instruction.get_block_end()
+
+      if instruction.opcode not in self._allowed_ops:
+         raise BadInstructionError ( lino, input_line, "unexpected" )
+      # --
+
+      if instruction.opcode == instruction.op_if_end:
+         assert self.is_closed is False
+
+         if instruction.args:
+            raise BadInstructionError ( lino, input_line, "no args accepted" )
+
+         self.is_blind  = None
+         self.is_closed = True
+         self._allowed_ops = []
+
+      elif instruction.opcode == instruction.op_if_else:
+         assert self.is_closed is False
+
+         if instruction.args:
+            raise BadInstructionError ( lino, input_line, "no args accepted" )
+
+         self.is_blind = self._was_matched
+
+      elif instruction.opcode == instruction.op_if:
+         assert self.is_closed is None
+
+         self.is_blind     = self._parse_if_instruction (
+            visible_metavars, lino, input_line, instruction
+         )
+         self._was_matched = not self.is_blind
+         self.is_closed    = False
+
+      elif instruction.opcode == instruction.op_if_else_if:
+         is_blind = self._parse_if_instruction (
+            visible_metavars, lino, input_line, instruction
+         )
+
+         if self._was_matched:
+            self.is_blind = True
+         else:
+            self.is_blind     = is_blind
+            self._was_matched = not is_blind
+
+      else:
+         raise NotImplementedError ( hex(instruction.opcode) )
+      # --
+
+      if self._forced_blind:
+         self.is_blind = True
+
+      self.instructions.append ( ( lino, instruction ) )
+      try:
+         self._allowed_ops = instruction.get_block_end()
+      except KeyError:
+         self._allowed_ops = []
+         assert self.is_closed
+   # --- end of update (...) ---
+
+# --- end of FileReaderIfBlock ---
+
+
+class MetavarFileReader ( FileReader ):
+   DEFAULT_NAME_PATTERN   = '[A-Z_][A-Z_0-9]*'
+   DEFAULT_PREFIX_PATTERN = '@@'
+   DEFAULT_SUFFIX_PATTERN = True
+
+   def __init__ ( self,
+      metavar_name=None, metavar_prefix=None, metavar_suffix=None
+   ):
+      super ( MetavarFileReader, self ).__init__()
+      self.metavar_name   = metavar_name    or self.DEFAULT_NAME_PATTERN
+      self.metavar_prefix = metavar_prefix  or self.DEFAULT_PREFIX_PATTERN
+      self.metavar_suffix = metavar_suffix  or self.DEFAULT_SUFFIX_PATTERN
+
+   def preprocess_xform_line ( self, line ):
+      return line
+
+   def process_xform_line ( self, line ):
+      return line
+
+   def expand_builtin ( self, lino, input_line, instruction ):
+      raise NotImplementedError ( hex(instruction.opcode), instruction.args )
+
+   def get_metavar_suffix ( self ):
+      return (
+         self.metavar_prefix if self.metavar_suffix is True
+            else self.metavar_suffix
+      )
+
+   def get_metavar_regex ( self ):
+      return re.compile (
+         r'{prefix}(?P<name>{name}){suffix}'.format (
+            prefix = self.metavar_prefix,
+            name   = self.metavar_name,
+            suffix = self.get_metavar_suffix()
+         )
+      )
+
+   def get_metavar_name_regex ( self ):
+      return re.compile ( '^' + self.metavar_name + '$' )
+
+   def get_metavar_str ( self, name ):
+      return (
+         self.metavar_prefix + name + self.get_metavar_suffix()
+      )
+
+   def preprocess_lines ( self, *args, **kwargs ):
+      return self._preprocess_lines (
+         self.get_metavar_regex(), *args, **kwargs
+      )
+
+
+   def do_parse_instruction ( self, lino, input_line, line ):
+      return None
+
+   def do_parse_metavar_line ( self, re_metavar, lino, input_line, line ):
+      mline         = MetavarTextLine()
+      remainder_idx = 0
+
+      for match_obj in re_metavar.finditer ( line ):
+         start_idx, end_idx = match_obj.span()
+
+         if start_idx != remainder_idx:
+            assert start_idx > 0
+            mline.add_line_component ( line[remainder_idx:start_idx] )
+
+         mline.add_create_metavar_ref (
+            match_obj.group('name'),
+            ( start_idx, end_idx ),
+            match_obj.group(0)
+         )
+
+         remainder_idx = end_idx
+      # -- end for
+
+      mline.add_line_component_skip_empty ( line[remainder_idx:] )
+      return mline
+
+   def accumulate_input_lines ( self, lines ):
+      return enumerate(lines)
+
+   def _preprocess_lines ( self, re_metavar, lines ):
+      xform_line = self.preprocess_xform_line
+
+      for lino, input_line in self.accumulate_input_lines(lines):
+         do_parse_instruction  = self.do_parse_instruction
+         do_parse_metavar_line = self.do_parse_metavar_line
+
+         line_to_process = xform_line ( input_line )
+         instruction     = None
+         line_obj        = None
+
+         if not line_to_process:
+            line_obj = line_to_process
+         else:
+            instruction = do_parse_instruction (
+               (lino+1), input_line, line_to_process
+            )
+
+            if instruction is None:
+               line_obj = do_parse_metavar_line (
+                  re_metavar, (lino+1), input_line, line_to_process
+               )
+
+            # -- end if <instruction>
+         # -- end if <line>
+
+         yield ( (lino+1), input_line, instruction, line_obj )
+      # -- end for
+   # --- end of _preprocess_lines (...) ---
+
+   def preprocess_and_expand_lines ( self, metavars, lines ):
+      return self._preprocess_and_expand_lines (
+         self.get_metavar_regex(), self.get_metavar_name_regex(),
+         metavars, lines
+      )
+
+   def _preprocess_and_expand_lines (
+      self, re_metavar, re_metavar_name, metavars, lines
+   ):
+      # FIXME: use stack-like list instead of recursion
+      visible_metavars = metavars
+      block_stack = []
+
+      for (
+         lino, input_line, instruction, line_obj
+      ) in self._preprocess_lines ( re_metavar, lines ):
+
+         if instruction is not None:
+            if instruction.opcode == instruction.op_if:
+               if_block = FileReaderIfBlock (
+                  block_stack[-1].is_blind if block_stack else False
+               )
+
+               if_block.update (
+                  visible_metavars, lino, input_line, instruction
+               )
+               block_stack.append ( if_block )
+
+            elif block_stack and block_stack[-1].accepts ( instruction ):
+
+               block_stack[-1].update (
+                  visible_metavars, lino, input_line, instruction
+               )
+
+               if block_stack[-1].is_closed: block_stack.pop()
+
+
+            elif block_stack and block_stack[-1].is_blind:
+               pass
+
+            elif instruction.opcode in {
+               instruction.op_define, instruction.op_define_weak
+            }:
+               args = instruction.args.split ( None, 1 )
+               if not args or not args[0]:
+                  raise BadInstructionError ( lino, input_line, "no args" )
+
+               elif re_metavar_name.match(args[0]) is None:
+                  raise BadInstructionError ( lino, input_line, "invalid name" )
+
+
+               varname = args[0]
+               value   = args[1] if len(args) > 1 else ''
+
+               if (
+                  value[0] == value[-1] and len(value) > 1 and
+                  ord(value[0]) == 0x22
+               ):
+                  value = value[1:-1]
+
+               if varname in visible_metavars:
+                  if instruction.opcode == instruction.op_define:
+                     raise BadInstructionError ( lino, input_line, "already defined" )
+               else:
+                  visible_metavars [varname] = value
+
+            elif instruction.opcode == instruction.op_undef:
+               args = instruction.args.split ( None )
+               if not args:
+                  raise BadInstructionError ( lino, input_line, "no args" )
+
+               for varname in args:
+                  if visible_metavars.has_own ( varname ):
+                     del visible_metavars [varname]
+                  else:
+                     raise BadInstructionError (
+                        lino, input_line, varname + " not defined"
+                     )
+
+
+            elif instruction.opcode == instruction.op_builtin:
+               if not instruction.args:
+                  raise BadInstructionError ( lino, input_line, "no builtin specified" )
+
+               for result in self._preprocess_and_expand_lines (
+                  re_metavar, re_metavar_name, visible_metavars,
+                  self.expand_builtin ( lino, input_line, instruction )
+               ):
+                  yield result
+
+            else:
+               raise NotImplementedError ( hex(instruction.opcode) )
+
+         elif block_stack and block_stack[-1].is_blind:
+            pass
+
+         elif line_obj is False or line_obj is None: # but may be ''
+            pass
+
+         else:
+            yield ( visible_metavars, lino, input_line, line_obj )
+
+      if block_stack:
+         raise ValueError ( "missing endif's", block_stack )
+
+      if visible_metavars is not metavars:
+         raise ValueError() # FIXME/TODO: did not leave metavars scope
+
+   # --- end of _preprocess_and_expand_lines (...) ---
+
+   def process_lines (
+      self, metavars, lines, filepath=None, keep_going=False
+   ):
+      xform_line = self.process_xform_line
+
+      for (
+         visible_metavars, lino, input_line,  line_obj
+      ) in self.preprocess_and_expand_lines ( metavars, lines ):
+
+         if isinstance ( line_obj, MetavarTextLine ):
+            missing = line_obj.assign_from ( visible_metavars )
+
+            if missing:
+               ewrite   = sys.stderr.write
+               colwidth = get_dec_int_digit_len ( len(input_line) )
+
+               for metavar_ref in missing:
+                  ewrite (
+                     (
+                        '{filepath}: line {lino:d}: column {col:>{l}d}: '
+                        'metavar not defined: {name}\n'
+                     ).format (
+                        filepath = (filepath or '???'),
+                        lino     = lino,
+                        col      = metavar_ref.pos[0],
+                        name     = metavar_ref.name,
+                        l        = colwidth
+                     )
+                  )
+
+               ewrite ( '>>> ' + input_line + '\n' )
+
+               if '\t' not in input_line:  # and $others not in input_line
+                  for metavar_ref in missing:
+                     ewrite (
+                        '>>> '
+                        + (metavar_ref.pos[0] * ' ') + '^'
+                        + ((metavar_ref.pos[1] - metavar_ref.pos[0] - 2) * '~')
+                        + '^\n'
+                     )
+               # --
+
+               if keep_going:
+                  for metavar_ref in missing:
+                     metavar_ref.value = metavar_ref.matched_text
+               else:
+                  names_missing = sorted ( set ( m.name for m in missing ) )
+                  raise KeyError ( names_missing )
+
+               # --
+            # -- <missing?>
+         # -- <is metavar line?>
+
+         yield ( lino, input_line, xform_line ( str ( line_obj ) ) )
+
+   def preprocess_file ( self, filepath, **kwargs ):
+      return self.preprocess_lines (
+         self.iread_file_lines ( filepath ), **kwargs
+      )
+
+   def preprocess_and_expand_file ( self, metavars, filepath, **kwargs ):
+      return self.preprocess_and_expand_lines (
+         metavars, self.iread_file_lines ( filepath ), **kwargs
+      )
+
+   def process_file ( self, metavars, filepath, **kwargs ):
+      return self.process_lines (
+         metavars, self.iread_file_lines ( filepath ),
+         filepath=filepath, **kwargs
+      )
+
+
+
+
+class ShellVar ( object ):
+   def __init__ (
+      self, value, weak=False, const=False, once=None, safequote=None
+   ):
+      super ( ShellVar, self ).__init__()
+      self.value     = value
+      self.weak      = weak
+      self.const     = const
+      self.once      = (not weak) if once is None else once
+      self.safequote = safequote
+      self.used      = False
+
+   def reset ( self ):
+      self.used = False
+
+   def mark_as_used ( self ):
+      if not self.once or not self.used:
+         self.used = True
+         return True
+      else:
+         return False
+
+   def get_value_str ( self ):
+      value              = self.value
+      unquoted_value_str = str(value)
+
+      if isinstance ( value, int ) or value in {
+         'y', 'n', 'true', 'false', ''
+      }:
+         quoted_value_str = unquoted_value_str
+      else:
+         if self.safequote is None:
+            q = '"' if '$' in unquoted_value_str else "'"
+         elif self.safequote:
+            q = "'"
+         else:
+            q = '"'
+
+         quoted_value_str = q + unquoted_value_str + q
+
+      return ( unquoted_value_str, quoted_value_str )
+
+   def get_var_def_str ( self, varname, indent='' ):
+      value_str = self.get_value_str()
+
+      if self.const:
+         if self.weak:
+            return (
+               '{I}[ -n "${{{0}+SET}}" ] || readonly {0}={1}'
+            ).format ( varname, value_str[1], I=indent )
+         else:
+            return "{I}readonly {}={}".format ( varname, value_str[1], I=indent )
+
+      elif self.weak:
+         # FIXME: weak var uses ":=", weak const uses "="
+         return '{I}: ${{{0}:={1}}}'.format ( varname, value_str[0], I=indent )
+      else:
+         return "{I}{}={}".format ( varname, value_str[1], I=indent )
+   # --- end of get_var_def_str (...) ---
+
+
+
+# do not use os.EX_* here
+SHELL_DEFSYM_SYSEXITS = {
+   'EX_OK'            : ShellVar (   0, const=True ),
+   'EX_ERR'           : ShellVar (   1, const=True ),
+   'EX_OSERR'         : ShellVar (  71, const=True ),
+   'EX_USAGE'         : ShellVar (  64, const=True ),
+   'EX_SOFTWARE'      : ShellVar (  70, const=True ),
+   'EX_FUNC_UNDEF'    : ShellVar ( 101, const=True ),
+   'EX_NOT_SUPPORTED' : ShellVar ( 222, const=True ),
+   'EX_SHIFT_ERR'     : ShellVar ( 249, const=True ),
+   'EX_DIE'           : ShellVar ( 255, const=True ),
+}
+
+SHELL_DEFSYM_IFS = {
+   'IFS_DEFAULT'    : ShellVar ( "${IFS}", const=True, safequote=False ),
+   'IFS_NEWLINE'    : ShellVar ( '\n', const=True, safequote=True ),
+}
+
+SHELL_DEFSYM_MISC = {
+   'NEWLINE'        : ShellVar ( '\n', const=True, safequote=True ),
+   'DEVNULL'        : ShellVar ( '/dev/null', weak=True ),
+   'LOGGER'         : ShellVar ( 'true', weak=True )
+}
+
+SHELL_DEFSYMS = {
+   'sysexits'  : SHELL_DEFSYM_SYSEXITS,
+   'ifs'       : SHELL_DEFSYM_IFS,
+   'misc'      : SHELL_DEFSYM_MISC
+}
+
+class ShellMacros ( object ):
+
+   STR_FORMATTER = string.Formatter()
+   STR_VFORMAT   = STR_FORMATTER.vformat
+
+   LOOP_DELIMS   = {
+      '+++': ( 'return ${?}', 'return 1' ),
+      ':::': ( None, ':' ),
+      '---': ( 'return 0', 'return 0' )
+   }
+
+   VARIANT_MACROS = frozenset ({ 'strfeed', 'v0_strfeed', 'vappend' })
+
+   def __init__ ( self, config ):
+      super ( ShellMacros, self ).__init__()
+      self.config = config
+      self.shell  = config.get('shell') or 'sh'
+
+      for s in self.VARIANT_MACROS:
+         attr = getattr ( self, ( '_expand_' + s + '_' + self.shell ), None )
+
+         if attr is None:
+            # raises
+            attr = getattr ( self, ( '_expand_' + s + '_sh' ) )
+
+         if hasattr ( self, 'expand_' + s ):
+            setattr ( self, '_expand_' + s, attr )
+         else:
+            setattr ( self, 'expand_' + s, attr )
+      # --
+   # --- end of __init__ (...) ---
+
+   def _expand_strfeed_sh (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple):
+         yield False
+
+      yield self.STR_VFORMAT (
+         '{I}{{ printf \'%s\\n\' {0} | {1}; }}', args_tuple, fmt_vars
+      )
+
+   def _expand_strfeed_bash (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple):
+         yield False
+
+      yield self.STR_VFORMAT ( '{I}{{ {1} <<< {0}; }}', args_tuple, fmt_vars )
+
+   # FIXME: dedup code
+   def _expand_v0_strfeed_sh (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple):
+         yield False
+
+      yield self.STR_VFORMAT (
+         '{I}v0="$( printf \'%s\' {0} | {1} )"', args_tuple, fmt_vars
+      )
+
+   def _expand_v0_strfeed_bash (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple):
+         yield False
+
+      yield self.STR_VFORMAT ( '{I}v0=$( {1} <<< {0} )', args_tuple, fmt_vars )
+
+   def split_loop_items_code ( self, arg_str ):
+      items = None
+      sepa  = None
+      code  = None
+
+      if arg_str:
+         parts = re.split ( r'([:]{3}|[+]{3}|[-]{3})', arg_str, 1 )
+         items = parts[0].rstrip()
+         if len(parts) > 1:
+            if len(parts) != 3: raise ValueError()
+
+            sepa = parts[1]
+            code = parts[2].lstrip()
+
+            sepa_code = self.LOOP_DELIMS [sepa]
+
+            if code:
+               if sepa_code[0]:
+                  code = '{ ' + code + '; } || ' + sepa_code[0]
+            else:
+               code = sepa_code[1] or ':'
+         # -- end if <parts>
+      # -- end if <arg_str>
+
+      return ( items, code )
+   # --- end of split_loop_items_code (...) ---
+
+   def expand_foreach_static (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_tuple[0]:
+         yield False
+
+      items, code = self.split_loop_items_code ( args_tuple[1] )
+      if not items:
+         raise ValueError()
+
+      for item in shlex.split(items):
+         fmt_vars [args_tuple[0]] = item
+         yield self.STR_VFORMAT ( code, ( item, ), fmt_vars )
+   # --- end of expand_foreach_static (...) ---
+
+   expand_static_foreach = expand_foreach_static
+
+   def expand_foreach (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_tuple[0]:
+         yield False
+
+      items, code = self.split_loop_items_code ( args_tuple[1] )
+      if not items:
+         items = '\"${@}\"'
+
+      yield self.STR_VFORMAT (
+         '{I}for {0} in {1}; do', ( args_tuple[0], items ), fmt_vars
+      )
+
+      if code:
+         yield self.STR_VFORMAT ( '{I}   {0}', ( code, ), fmt_vars )
+         yield self.STR_VFORMAT ( '{I}done', (), fmt_vars )
+   # --- end of expand_foreach (...) ---
+
+   def expand_while_argc (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      items, code = self.split_loop_items_code ( args_str )
+
+      if not items or items == '_':
+         k = 0
+      elif items[0] in "\"$\'":
+         k = items
+      else:
+         k = int(items)
+
+      yield self.STR_VFORMAT (
+         '{I}while [ ${{#}} -gt {0} ]; do', ( k, ), fmt_vars
+      )
+
+      if code:
+         yield self.STR_VFORMAT ( '{I}   {0}', ( code, ), fmt_vars )
+         yield self.STR_VFORMAT (
+            '{I}   shift || return ${{EX_SHIFT_ERR:-249}}', (), fmt_vars
+         )
+         yield self.STR_VFORMAT ( '{I}done', (), fmt_vars )
+   # --- end of expand_while_argc (...) ---
+
+   expand_argc_loop = expand_while_argc
+
+   def expand_doshift (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      varname = args_tuple[0]
+      if not varname or varname == '_':
+         varname = 'doshift'
+
+      action = args_tuple[1] or 'return ${EX_SHIFT_ERR:-249}'
+
+      try:
+         k = int(varname,10)
+      except ValueError:
+         if varname[0] != '$':
+            varname = '${' + varname + '}'
+
+         yield self.STR_VFORMAT (
+            '{I}[ {0} -eq 0 ] || shift {0} || {1}',
+            ( varname, action ), fmt_vars
+         )
+      else:
+         if k > 0:
+            yield self.STR_VFORMAT (
+               '{I}shift {0:d} || {1}', ( k, action ), fmt_vars
+            )
+         else:
+            yield False
+
+   def expand_defsym (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      #expand_defsym [<category> [<key>...]]
+      category = (args_tuple[0] or '').lower()
+      if not category or category in { '_', 'all', '@all' }:
+         category      = None
+         defsym_table  = None
+         defsym_tables = [ SHELL_DEFSYMS[k] for k in sorted(SHELL_DEFSYMS) ]
+      else:
+         defsym_table  = SHELL_DEFSYMS [category]
+         defsym_tables = None
+
+      def defsym_table_iter_keys ( defsym_table, want_keys ):
+         for key in want_keys:
+            yield ( key, defsym_table [key] )
+
+      def defsym_table_iter_all ( defsym_table ):
+         for key in sorted(defsym_table):
+            yield ( key, defsym_table [key] )
+
+      def defsym_tables_iter_keys ( defsym_table_list, want_keys ):
+         for key in want_keys:
+            for defsym_table in defsym_table_list:
+               if key in defsym_table:
+                  yield ( key, defsym_table [key] )
+                  break
+            else:
+               raise KeyError ( key )
+
+      def defsym_tables_iter_all ( defsym_table_list ):
+         for defsym_table in defsym_table_list:
+            for item in defsym_table_iter_all ( defsym_table ):
+               yield item
+
+
+      if args_tuple[1] is not None:
+         want_keys = [ k for k in args_tuple[1].split(None) if k ]
+
+         if defsym_table is not None:
+            var_iter = defsym_table_iter_keys ( defsym_table, want_keys )
+         else:
+            var_iter = defsym_tables_iter_keys ( defsym_tables, want_keys )
+
+      elif defsym_table is not None:
+         var_iter = defsym_table_iter_all ( defsym_table )
+      else:
+         var_iter = defsym_tables_iter_all ( defsym_tables )
+
+
+      for key, var_entry in var_iter:
+         if var_entry.mark_as_used():
+            yield var_entry.get_var_def_str ( key, indent=fmt_vars['I'] )
+
+
+
+   def iter_vardef_argv ( self, argv ):
+      vartype_map     = {
+         'str'  : ShellVar(""),
+         'int'  : ShellVar(0)
+      }
+
+      prefix      = None
+      read_prefix = False
+      vartype     = 'str'
+      default_var = vartype_map[vartype]
+
+      for arg in filter(None,argv):
+         if read_prefix:
+            prefix      = arg
+            read_prefix = False
+
+         elif arg == '--':
+            vartype     = 'str'
+            default_var = vartype_map[vartype]
+            prefix      = None
+            read_prefix = False # not needed
+
+         elif arg in { '-i', }:
+            vartype     = 'int'
+            default_var = vartype_map[vartype]
+
+         elif arg == '-p':
+            read_prefix = True
+
+         elif prefix and arg[0] == '_':
+            yield (
+               ( (prefix[:-1] if prefix[-1] == '_' else prefix) + arg[1:] ),
+               default_var
+            )
+
+         else:
+            yield ( ( (prefix or '') + arg ), default_var )
+   # --- end of iter_vardef_argv (...) ---
+
+   def expand_zapvar (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      for name, default_var in self.iter_vardef_argv(argv):
+         yield default_var.get_var_def_str ( name, fmt_vars['I'] )
+         ###yield self.STR_VFORMAT ( '{I}{0}=', ( name, ), fmt_vars )
+
+   expand_zapvars = expand_zapvar
+
+   def expand_retvar (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      varnames = None
+      if not argv:
+         varnames = [ 'v0' ]
+
+
+      elif len(argv) == 1:
+         try:
+            num_retvars = int(argv[0], 10)
+         except ValueError:
+            varnames = argv
+         else:
+            varnames = [ 'v{:d}'.format(k) for k in range(num_retvars) ]
+
+      else:
+         varnames = argv
+
+      return self.expand_zapvar (
+         builtin_name, None, None, varnames, fmt_vars
+      )
+
+   expand_retvars = expand_retvar
+
+   def expand_local (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      re_vardef = re.compile (
+         '(?P<name>[A-Za-z_0-9]+)'
+         '(?P<shiftop>[<]{1,})?(?:(?P<assignop>[=])(?P<value>.*)?)?'
+      )
+
+      varnames      = set()
+      var_init_code = []
+
+      for vardef_str, default_var in self.iter_vardef_argv(argv):
+         vardef_match = re_vardef.match(vardef_str)
+         if vardef_match is None:
+            raise ValueError ( builtin_name, argv, vardef_str )
+
+         vardef    = vardef_match.groupdict()
+         nshifts   = len ( vardef ['shiftop'] ) if vardef ['shiftop'] else 0
+         if not vardef ['assignop']:
+            vardef ['value'] = r'${1:?}'
+
+
+         # we allow duplicate varnames, e.g. a<=${1:?}; a=/dev/${a#/}
+#         if vardef ['name'] in varnames:
+#            raise KeyError ( <<varname>>, "duplicate varname" )
+
+         varnames.add ( vardef ['name'] )
+
+         if nshifts or vardef ['assignop']:
+            if vardef['value']:
+               q = ''
+               if vardef['value'] not in { 'y', 'n', 'true', 'false' }:
+                  try:
+                     int(vardef['value'], 10)
+                  except ValueError:
+                     q = '"'
+            else:
+               q = ''
+
+            var_init_code.append (
+               self.STR_VFORMAT (
+                  '{name}={0}{value}{0}', ( q, ), vardef
+               )
+            )
+
+         if nshifts == 1:
+            var_init_code.append (
+               self.STR_VFORMAT (
+                  'shift || return ${{EX_SHIFT_ERR:-249}}',
+                  ( nshifts, ), {}
+               )
+            )
+         elif nshifts:
+            var_init_code.append (
+               self.STR_VFORMAT (
+                  'shift {} || return ${{EX_SHIFT_ERR:-249}}',
+                  ( nshifts, ), {}
+               )
+            )
+      # -- end for
+
+      for varname in sorted(varnames):
+         yield self.STR_VFORMAT ( '{I}local  {}', ( varname, ), fmt_vars )
+
+      if varnames and var_init_code:
+         yield ''
+
+      for unindented_line in var_init_code:
+         yield ( fmt_vars['I'] + unindented_line )
+
+
+   expand_locals = expand_local
+
+   def _expand_basic_arith ( self, op_str, args_tuple, fmt_vars ):
+      vardef = args_tuple[0]
+      if not vardef or vardef == '_':
+         vardef = 'i0'
+      else:
+         try:
+            k = int(vardef, 10)
+         except ValueError:
+            pass
+         else:
+            vardef = 'i' + str(k)  # and str(k) ~~~ vardef..
+
+      dstvar, sepa, srcvar = vardef.partition('=')
+      if not dstvar: raise ValueError()
+      if not srcvar: srcvar = dstvar
+
+      if args_tuple[1]:
+         try:
+            arg = int(args_tuple[1])
+         except ValueError:
+            arg = args_tuple[1]
+
+      elif op_str in { '*', '/' }:
+         return False
+      else:
+         arg = 1
+
+      if self.shell == 'bash' and srcvar == dstvar:
+         if arg == 1 and op_str in { '+', '-' }:
+            return self.STR_VFORMAT (
+               '{I}(({0}{1})) || :', ( dstvar, 2*op_str ), fmt_vars
+            )
+         else:
+            return self.STR_VFORMAT (
+               '{I}(({0}{2}={1})) || :', ( dstvar, arg, op_str ), fmt_vars
+            )
+      else:
+         return self.STR_VFORMAT (
+            '{I}{0}=$(( {1} {3} {2} ))',
+            ( dstvar, srcvar, arg, op_str ), fmt_vars
+         )
+
+   def expand_inc (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '+', args_tuple, fmt_vars )
+
+   def expand_dec (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '-', args_tuple, fmt_vars )
+
+   def expand_mult (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '*', args_tuple, fmt_vars )
+
+   def expand_div (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '/', args_tuple, fmt_vars )
+
+   def expand_mod (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '%', args_tuple, fmt_vars )
+
+   def expand_lshift (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '<<', args_tuple, fmt_vars )
+
+   def expand_rshift (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      yield self._expand_basic_arith ( '>>', args_tuple, fmt_vars )
+
+   def expand_bash_compat (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      _vformat = self.STR_VFORMAT
+      bindent  = fmt_vars['I'] + '   '
+
+      def vdef ( args, indent_str ):
+         fvars = { 'I': indent_str }
+
+         yield _vformat (
+            '{I}{0}="$( {1} )" && \\', args, fvars
+         )
+         yield _vformat (
+            '{I}[ -n "${{{0}}}" ] || {0}="{2}"', args, fvars
+         )
+      # ---
+
+      is_first = True
+
+      # args := varname, command, fallback
+      for args in [
+         ( 'EUID', 'id -u 2>>/dev/null',        '65534'  ),
+         ( 'UID',  'id -r -u 2>>/dev/null',     '65534'  ),
+         ( 'USER', 'id -r -u -n 2>>/dev/null',  'nobody' ),
+      ]:
+         if is_first:
+            is_first = False
+         else:
+            yield ''
+
+         yield _vformat (
+            '{I}if [ -z "${{{0}-}}" ]; then', args, fmt_vars
+         )
+         for it in vdef ( args, bindent ): yield it
+         yield _vformat ( '{I}fi', (), fmt_vars )
+      # --
+
+      if is_first:
+         is_first = False
+      else:
+         yield ''
+
+      yield _vformat (
+         '{I}if [ -z "${{HOME-}}" ] && [ -n "${{USER-}}" ]; then',
+         (), fmt_vars
+      )
+      for it in vdef (
+         (
+            'HOME',
+            'getent passwd "${USER}" 2>>/dev/null | cut -d \':\' -f 6',
+            ''
+         ), bindent
+      ):
+         yield it
+      yield _vformat ( '{I}fi', (), fmt_vars )
+
+   def vformat_lines ( self, args, fmt_vars, lines ):
+      _vformat = self.STR_VFORMAT
+      for line in lines:
+         yield _vformat ( line, args, fmt_vars )
+
+   def expand_scriptvars (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      vprefix = args_tuple[0]
+      if not vprefix or vprefix == '_': vprefix = 'SCRIPT_'
+
+      vsrc = args_tuple[1]
+      if not vsrc or vsrc == '_': vsrc = '${0:?}'
+
+      return self.vformat_lines (
+         ( vprefix, vsrc ), fmt_vars,
+         [
+            '{I}if [ -n "{1}" ]; then',
+            '{I}   {0}FILE="$( realpath -Ls -- "{1}" 2>>/dev/null )"',
+            '{I}   if [ -z "${{{0}FILE}}" ]; then',
+            '{I}      {0}FILE="$( readlink -f -- "{1}" 2>>/dev/null )"',
+            '{I}      [ -n "${{{0}FILE}}" ] || {0}FILE="{1}"',
+            '{I}   fi',
+            '{I}   {0}DIR="${{{0}FILE%/*}}"',
+            '{I}else',
+            '{I}   {0}FILE="UNDEF"',
+            '{I}   {0}DIR="${{PWD}}"',
+            '{I}fi',
+            '',
+            '{I}{0}FILENAME="${{{0}FILE##*/}}"',
+            '{I}{0}NAME="${{{0}FILENAME%.*}}"',
+         ]
+      )
+
+   def _get_noglob_vars ( self, args_tuple, default_name='__noglob_sav' ):
+      varname = args_tuple[0]
+      if varname and varname[0] == '+':
+         nodef   = True
+         varname = varname[1:]
+      else:
+         nodef   = False
+
+      if not varname or varname == '_':
+         varname = default_name
+
+      elif varname[0] == '_':
+         varname = ( default_name + varname )
+
+
+      return ( varname, nodef )
+
+   def expand_save_noglob (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      varname, nodef = self._get_noglob_vars ( args_tuple )
+      lines = []
+
+      if not nodef:
+         lines += [ '{I}local {0}', '' ]
+
+      lines += [
+         '{I}{0}="+"',
+         '{I}case "$-" in',
+         '{I}   *f*) {0}="-" ;;',
+         '{I}esac'
+      ]
+
+      return self.vformat_lines ( ( varname, ), fmt_vars, lines )
+
+   def expand_enable_globbing (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      for line in self.expand_save_noglob (
+         builtin_name, args_str, args_tuple, argv, fmt_vars
+      ):
+         yield line
+      yield self.STR_VFORMAT ( '{I}set +f', (), fmt_vars )
+
+   def expand_disable_globbing (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      for line in self.expand_save_noglob (
+         builtin_name, args_str, args_tuple, argv, fmt_vars
+      ):
+         yield line
+      yield self.STR_VFORMAT ( '{I}set -f', (), fmt_vars )
+
+   def expand_restore_noglob (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      varname, nodef = self._get_noglob_vars ( args_tuple )
+
+      lines = [
+         '{I}case "${{{0}-}}" in',
+         '{I}   \'+\')  {0}=""; set +f ;;',
+         '{I}   \'-\')  {0}=""; set -f ;;',
+         #'{I}   \'\')  true ;;',
+         #'{I}   *)   false ;;',
+         '{I}esac',
+      ]
+
+      return self.vformat_lines ( ( varname, ), fmt_vars, lines )
+
+   def expand_setvar (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_tuple[0]: raise ValueError()
+
+      yield self.STR_VFORMAT (
+         r'{I}eval "{0}=\"{1}\""',
+         ( args_tuple[0], args_tuple[1] or '' ), fmt_vars
+      )
+
+   def expand_loadvar (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_tuple[1]:
+         if not args_tuple[0]: raise ValueError()
+         dst = None
+         ref = args_tuple[0]
+      else:
+         dst, ref = args_tuple
+      # --
+
+      if not dst or dst == '_':
+         dst = 'v0'
+
+      return self.expand_setvar (
+         builtin_name, args_str, ( dst, r'\${' + ref + '}' ), argv, fmt_vars
+      )
+
+   def expand_repeat (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple): raise ValueError()
+
+      num_repeat = int(args_tuple[0])
+      line       = fmt_vars['I'] + args_tuple[1]
+
+      for k in range(num_repeat):
+         yield line
+
+   def expand_ifs (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      def gen_ifs_components ( argv ):
+         ifs_map = {
+            '_'         : '<>',
+            'newline'   : '${IFS_NEWLINE:?}',
+            'nl'        : '${IFS_NEWLINE:?}',
+            'space'     : ' ',
+            'tab'       : chr(0x09),
+            'comma'     : ',',
+            'semicolon' : ';',
+            'pipe'      : '|',
+            'colon'     : ':',
+         }
+
+         if not argv:
+            yield '${IFS_DEFAULT?}'
+         else:
+            for arg in filter(None, argv):
+               if arg[0] == '<' and arg[-1] == '>' and len(arg) > 2:
+                  keyword = arg[1:-1]
+                  yield ifs_map [keyword.lower()]
+               else:
+                  yield arg
+      # ---
+
+      yield self.STR_VFORMAT (
+         '{I}IFS="{0}"',
+         ( ''.join ( gen_ifs_components(argv) ), ), fmt_vars
+      )
+
+   def expand_revrev (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_str: raise ValueError()
+      yield self.STR_VFORMAT (
+         '{I}rev | {0} | rev', ( args_str, ), fmt_vars
+      )
+
+   def expand_revcut (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_str: raise ValueError()
+      yield self.STR_VFORMAT (
+         '{I}rev | cut {0} | rev', ( args_str, ), fmt_vars
+      )
+
+   def casetrue_expand (
+      self, f_convert_pattern, builtin_name, fmt_vars, argv
+   ):
+      if not argv or not argv[0] or len(argv) < 2:
+         raise ValueError()
+
+      lines = [ (  'case "' + argv[0] + '" in' ) ]
+      _convert = (
+         (lambda x: x) if f_convert_pattern is None else f_convert_pattern
+      )
+
+      is_first = True
+      for pattern in argv[1:]:
+         if is_first:
+            is_first = False
+         else:
+            lines[-1] += '|\\'
+
+         lines.append ( '   ' + ( _convert(pattern) or '""' ) )
+      # --
+      lines[-1] += ')'
+
+
+      if len(lines[-1]) < 15:
+         lines[-1] += ' true ;;'
+      else:
+         lines += [
+            '      true',
+            '   ;;'
+         ]
+
+      lines += [
+         '   *) false ;;',
+         'esac'
+      ]
+
+      indent_str = fmt_vars['I']
+      for line in lines:
+         yield (indent_str + line) if line else line
+
+   def expand_fnmatch (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      return self.casetrue_expand ( None, builtin_name, fmt_vars, argv )
+
+   def expand_str_startswith (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      return self.casetrue_expand (
+         lambda k: ( ('"' + k + '"*') if k else None ),
+         builtin_name, fmt_vars, argv
+      )
+
+   def expand_str_endswith (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      return self.casetrue_expand (
+         lambda k: ( ('*"' + k + '"') if k else None ),
+         builtin_name, fmt_vars, argv
+      )
+
+   def expand_function_defined (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not argv or not argv[0]: raise ValueError()
+
+      return self.casetrue_expand (
+         None, builtin_name, fmt_vars,
+         [
+            s.format(argv[0]) for s in [
+               '$(LANG=C LC_ALL=C command -V "{0}" 2>>/dev/null)',
+               '"{0} is a "*" function"*'
+            ]
+         ]
+      )
+
+   def do_expand_assign_from_retvar (
+      self, builtin_name, retvar, args_tuple, fmt_vars
+   ):
+      suffix = None
+      dstvar = None
+
+      if args_tuple[0] in { '-e', '?' }:
+         dstvar = args_tuple[1]
+         suffix = '?'
+
+      elif args_tuple[0] in { '-u', '_' }:
+         dstvar = args_tuple[1]
+         suffix = ''
+
+      elif args_tuple[0] in { ':?' }:
+         dstvar = args_tuple[1]
+         suffix = ':?'
+
+      else:
+         dstvar = args_tuple[0]
+         suffix = ''
+      # --
+
+      if not dstvar: raise ValueError()
+      yield self.STR_VFORMAT (
+         '{I}{1}="${{{0}{2}}}"; v0=', ( retvar, dstvar, suffix ), fmt_vars
+      )
+
+   def expand_v0 (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      return self.do_expand_assign_from_retvar (
+         builtin_name, 'v0', args_tuple, fmt_vars
+       )
+
+   def expand_v1 (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      return self.do_expand_assign_from_retvar (
+         builtin_name, 'v1', args_tuple, fmt_vars
+       )
+
+   def expand_vexport (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not args_tuple[0] or args_tuple[1] is None:
+         raise ValueError()
+
+      yield self.STR_VFORMAT ( '{I}{0}={1}',    args_tuple, fmt_vars )
+      yield self.STR_VFORMAT ( '{I}export {0}', args_tuple, fmt_vars )
+
+   def _expand_vappend_sh (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple): raise ValueError()
+      # vappend ( var, str )
+      #  var += str
+      yield self.STR_VFORMAT (
+         '{I}{0}="${{{0}}}{1}"', args_tuple, fmt_vars
+      )
+
+   def _expand_vappend_bash (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple): raise ValueError()
+      # vappend ( var, str )
+      #  var += str
+      yield self.STR_VFORMAT ( '{I}{0}+="{1}"', args_tuple, fmt_vars )
+
+   def expand_vjoin_append (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      # vjoin_append ( seq, var, str )
+      #  var = str if not $var else ( var seq str )
+      if not all(args_tuple): raise ValueError()
+
+      seq = args_tuple[0]
+      if seq[0] == '_': seq = seq[1:] # may be empty
+
+      args = args_tuple[1].split(None, 1)
+      if not all(args): raise ValueError()
+
+      yield self.STR_VFORMAT (
+         '{I}{0}="${{{0}:+${{{0}}}{1}}}{2}"',
+         ( args[0], seq, args[1] ), fmt_vars
+      )
+
+   def expand_vadd (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      if not all(args_tuple): raise ValueError()
+      # vadd ( var, str )
+      #  var = str + var
+      yield self.STR_VFORMAT (
+         '{I}{0}="{1}${{{0}}}"', args_tuple, fmt_vars
+      )
+
+   def expand_vjoin_add (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      # vjoin_add ( seq, var, str )
+      #  var = str if not $var else ( str seq var )
+      if not all(args_tuple): raise ValueError()
+
+      seq = args_tuple[0]
+      if seq[0] == '_': seq = seq[1:] # may be empty
+
+      args = args_tuple[1].split(None, 1)
+      if not all(args): raise ValueError()
+
+      yield self.STR_VFORMAT (
+         '{I}{0}="{2}${{{0}:+{1}${{{0}}}}}"',
+         ( args[0], seq, args[1] ), fmt_vars
+      )
+
+   def expand_varcheck (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      _vformat = self.STR_VFORMAT
+      ere      = re.compile ( '[:?=]' )
+      varnames = argv or [ 'v0:?' ]
+
+      for varname in varnames:
+         if ere.search ( varname ) is not None:
+            yield _vformat ( '{I}: ${{{0}}}', ( varname, ), fmt_vars )
+         else:
+            a_str, sepa, b_str = varname.partition('..')
+            if sepa:
+               try:
+                  a = int(a_str, 10)
+                  b = int(b_str, 10)
+               except ValueError:
+                  sepa = None
+               else:
+                  for k in range ( a, b+1 ):
+                     yield _vformat ( '{I}: ${{{0}:?}}', ( k, ), fmt_vars )
+
+            if not sepa:
+               yield _vformat ( '{I}: ${{{0}:?}}', ( varname, ), fmt_vars )
+
+
+   #def expand_vall
+   #def expand_vany
+
+
+class MetavarShellFileReader ( MetavarFileReader ):
+
+   DEFAULT_NAME_PATTERN   = '(?:[$]|[A-Z_][A-Z_0-9]*)'
+
+   STR_FORMATTER = string.Formatter()
+   STR_VFORMAT   = STR_FORMATTER.vformat
+
+   re_instruction = re.compile (
+      '^(?P<indent>\s+)?'
+      '(?P<prefix>[<][%]\s*)'
+      '(?P<instruction>'
+         '(?P<keyword>(?:[%]\s*)?\S+)(?:\s+(?P<args>.*\S))?'
+      ')'
+      '(?P<suffix>\s*[%][>])'
+      '(?P<remainder>\s*.*)?$'
+   )
+
+   re_instruction_keyword_fixup = re.compile ( r'([-]|\s)' )
+
+
+   def __init__ ( self, *args, **kwargs ):
+      super ( MetavarShellFileReader, self ).__init__ ( *args, **kwargs )
+      self.macros = None
+
+   def add_default_builtins ( self, config ):
+      self.macros = ShellMacros ( config )
+
+
+   def expand_builtin ( self, lino, input_line, instruction ):
+
+      def expand_builtin_recursive (
+         macro, builtin_name, args_str, args_tuple, argv, fmt_vars
+      ):
+         if isinstance ( macro, _string_types ):
+            yield self.STR_VFORMAT ( macro, args_tuple, fmt_vars )
+
+         elif hasattr ( macro, '__call__' ):
+            for result in macro (
+               builtin_name, args_str, args_tuple, argv, fmt_vars
+            ):
+               yield result
+
+         elif hasattr ( macro, '__iter__' ) or hasattr ( macro, '__next__' ):
+            for orcam in macro:
+               for result in expand_builtin_recursive (
+                  orcam, builtin_name, args_str, args_tuple, argv, fmt_vars
+               ):
+                  yield result
+      # --- end of expand_builtin_recursive (...) ---
+
+
+      i_argv        = instruction.args.split ( None, 1 )
+      builtin_name  = i_argv[0]
+      builtin_ename = builtin_name
+
+      try:
+         macro = getattr ( self.macros, 'expand_' + builtin_ename )
+      except AttributeError:
+         raise ShellMacroNotDefinedError ( builtin_ename, lino, input_line )
+
+      if len(i_argv) > 1:
+         args_str    = i_argv[1]
+         argv        = shlex.split(args_str)
+         _args_tuple = args_str.split ( None, 1 )
+         if not _args_tuple:
+            args_tuple = ( None, None )
+         elif len(_args_tuple) == 1:
+            args_tuple = ( _args_tuple[0], None )
+         else:
+            args_tuple = _args_tuple
+
+      else:
+         args_str   = None
+         argv       = []
+         args_tuple = ( None, None )
+
+      fmt_vars = {
+         'name'        : builtin_name,
+         'ename'       : builtin_ename,
+         'I'           : (instruction.line_indent or ''),
+         'NL'          : os.linesep,
+         'BS'          : chr(0x5c),
+         'BSNL'        : chr(0x5c) + os.linesep,
+         'SPACE'       : ' ',
+         'instruction' : instruction,
+         'args'        : args_str,
+         'argv'        : argv,
+         'args_tuple'  : args_tuple
+      }
+
+      result_gen_iter = expand_builtin_recursive (
+         macro, builtin_name, args_str, args_tuple, argv, fmt_vars
+      )
+
+      try:
+         prev_result = next ( result_gen_iter )
+      except StopIteration:
+         return
+
+      if prev_result is False:
+         raise BadInstructionError ( lino, input_line, "expansion error" )
+
+      for result in result_gen_iter:
+         yield prev_result
+         if result is False:
+            raise BadInstructionError ( lino, input_line, "expansion error" )
+         prev_result = result
+
+      if instruction.line_remainder:
+         yield prev_result + instruction.line_remainder
+      else:
+         yield prev_result
+   # --- end of expand_builtin (...) ---
+
+   def do_parse_instruction ( self, lino, input_line, line ):
+      match_obj = self.re_instruction.match ( line )
+
+      if match_obj is not None:
+         keyword_in = match_obj.group ( 'keyword' )
+         args       = match_obj.group ( 'args' )
+         indent     = match_obj.group ( 'indent' )
+         remainder  = match_obj.group ( 'remainder' )
+
+         # keywords are always lowercase, + replace '-' with ''
+         keyword = self.re_instruction_keyword_fixup.sub (
+            '', keyword_in.lower()
+         )
+
+         if keyword[0] == '%':
+            if len(keyword) == 1:
+               raise ValueError ( lino, input_line )
+
+            return FileReaderInstruction (
+               FileReaderInstruction.op_builtin,
+               ( (keyword[1:] + ' ' + args) if args else keyword[1:] ),
+               indent, remainder
+            )
+         # --
+
+         return FileReaderInstruction.new_from_keyword (
+            keyword, args, indent, remainder
+         )
+
+      return None
+   # --- end of do_parse_instruction (...) ---
+
+   def accumulate_input_lines ( self, lines ):
+      lcont_seq = chr(0x21) + chr(0x5c)  ## '!\'
+
+      mergelines      = False
+      line_buffer_idx = None
+      line_buffer     = []
+
+      for lino, line in enumerate(lines):
+         lsline = line.strip()
+         if lsline and lsline[:2] == '!!':
+            kw_line = lsline[2:].lower()
+         else:
+            kw_line = None
+
+         if kw_line == 'merge':
+            if line_buffer_idx is not None: raise ValueError(lino, line)
+            line_buffer_idx = lino
+            mergelines      = True
+
+         elif line and line[-2:] == lcont_seq and (
+            len(line) == 2 or line[-3] != '!'
+         ):
+            if line_buffer_idx is not None:
+               rem = lsline[:-2].rstrip()
+               line_buffer.append (
+                  rem[1:] if (rem and rem[0] == '|') else rem
+               )
+               rem = None
+            else:
+               line_buffer_idx = lino
+               line_buffer.append ( line[:-2].rstrip() )
+
+         elif line_buffer_idx is not None:
+            if kw_line == 'endmerge':
+               assert mergelines
+               mergelines = False
+            else:
+               line_buffer.append (
+                  lsline[1:] if (lsline and lsline[0] == '|') else lsline
+               )
+
+            if not mergelines:
+               if line_buffer:
+                  yield ( line_buffer_idx, ''.join ( line_buffer ) )
+               line_buffer_idx = None
+               line_buffer = []
+
+         elif kw_line == 'endmerge':
+            raise ValueError(lino, line)
+
+         else:
+            yield ( lino, line )
+      # --
+
+      if line_buffer:
+         assert line_buffer_idx is not None
+         yield ( line_buffer_idx, ''.join ( line_buffer ) )
+   # --- end of accumulate_input_lines (...) ---
+
+   def process_lines ( self, *args, **kwargs ):
+
+      def add_funcdef_argstr_match ( funcdef_vars, end_match ):
+         end_vars = end_match.groupdict()
+
+         if end_vars ['arg_str']:
+            funcdef_vars ['args'].append ( end_vars ['arg_str'] )
+
+         if end_vars ['end']:
+            for key in [
+               'end', 'end_def', 'end_type', 'inline_keyword',
+               'inline_func', 'end_rem'
+            ]:
+               assert key not in funcdef_vars
+
+               funcdef_vars [key] = end_vars [key]
+         # --
+      # --- end of add_funcdef_argstr_match (...) ---
+
+      def gen_funcdef_lines ( funcdef_vars ):
+         _vformat = self.STR_VFORMAT
+
+         metash_mods = frozenset ({ 'notrace', 'ftrace' })
+
+         funcdef_vars ['I'] = (funcdef_vars ['indent'] or '')
+
+         if funcdef_vars ['mod']:
+            fmods = set ((
+               (s[1:] if s[0] == '@' else s)
+                  for s in funcdef_vars['mod'].split(None) if s
+            ))
+         else:
+            fmods = set()
+
+         args = funcdef_vars ['args'] ## not implemented
+         args_str = ''.join(args) if args else None
+
+         mod_str = ''.join (
+            ( ('@' + s) for s in sorted(fmods - metash_mods) )
+         )
+         funcdef_vars ['mod_str'] = (mod_str + ' ') if mod_str else ''
+
+         if not funcdef_vars ['ret_type']:
+            funcdef_vars ['ret_type'] = 'void'
+
+
+         if not args_str:
+            yield _vformat (
+               '{I}## {mod_str}{ret_type} {name}()', (), funcdef_vars
+            )
+         else:
+            yield _vformat (
+               '{I}## {mod_str}{ret_type} {name} ( {} )',
+               ( args_str, ), funcdef_vars
+            )
+
+         yield _vformat ( '{I}##', (), funcdef_vars )
+
+         yield _vformat ( '{I}{name}() {{', (), funcdef_vars )
+
+         if funcdef_vars ['end_type'] != '{':
+            raise NotImplementedError ( funcdef_vars ['end_type'] )
+
+         if 'ftrace' in fmods:
+            yield _vformat (
+               '{I}   local _FUNCNAME; _FUNCNAME="{name}";', (), funcdef_vars
+            )
+            yield _vformat (
+               '{I}   local _FUNCTRACE="${{_FUNCTRACE-}} ${{_FUNCNAME}}";',
+               (), funcdef_vars
+            )
+            yield ''
+         # --
+
+
+      # --- end of gen_funcdef_lines (...) ---
+
+      re_funcdef = re.compile (
+         r'(?P<indent>\s+)?'
+         r'(?:(?P<mod>(?:[@]\S+\s+)*(?:[@]\S+))\s+)?'
+         r'(?:(?P<ret_type>void|int|shbool)\s+)?'
+         r'(?P<name>[a-z_A-Z]+)'
+         r'\s*[(]\s*'
+         r'(?P<rem>.*)'
+      )
+
+      re_funcdef_argstr = re.compile (
+         r'^'
+         r'\s*'
+         r'(?P<arg_str>.*?)'
+         r'\s*'
+         r'(?P<end>'
+            r'(?P<end_def>'
+               r'[)]\s*'
+               r'(?P<end_type>'
+                  r'[{;]|'
+                  r'(?:(?P<inline_keyword>[:+-]{2})\s+(?P<inline_func>.*)\s*[;])'
+               r')'
+            r')'
+            r'(?P<end_rem>\s*.*)'
+         r')?'
+         r'$'
+      )
+
+
+      #r'(?:(?P<inline_keyword>[:+-]{2})\s+(?P<inline_func>.*)\s*[;])'
+      #(word[,] )*word
+
+      #r'(?:[*]{2})?[a-z_A-Z0-9]+(?:)?'
+
+      #@stdio
+      #@stdout
+      #@stderr
+      #@notrace
+      # if non-bash:
+      #  _FUNCNAME  :=
+      #  _FUNCTRACE :=
+
+      funcdef_vars = None
+
+      for lino, input_line, line in (
+         super ( MetavarShellFileReader, self ).process_lines ( *args, **kwargs )
+      ):
+         if funcdef_vars:
+            if line:
+               end_match = re_funcdef_argstr.match ( line )
+
+               if end_match is None:
+                  raise ValueError ( lino, line )
+
+               if not any ( end_match.group ( 'arg_str', 'end' ) ):
+                  raise ValueError ( lino, line )
+
+               add_funcdef_argstr_match ( funcdef_vars, end_match )
+
+               if funcdef_vars.get('end'):
+                  for fline in gen_funcdef_lines ( funcdef_vars ):
+                     yield ( lino, input_line, fline )
+                  funcdef_vars = {}
+
+         else:
+            match_obj = re_funcdef.match(line)
+            if match_obj is not None and any (
+               match_obj.group ( 'mod', 'ret_type' )
+            ):
+               funcdef_vars          = match_obj.groupdict()
+               funcdef_vars ['args'] = []
+
+               if funcdef_vars ['rem']:
+                  end_match = re_funcdef_argstr.match ( funcdef_vars ['rem'] )
+
+                  if end_match is not None:
+                     if not any ( end_match.group ( 'arg_str', 'end' ) ):
+                        raise ValueError ( lino, line )
+
+                     add_funcdef_argstr_match ( funcdef_vars, end_match )
+
+                     if funcdef_vars.get('end'):
+                        for fline in gen_funcdef_lines ( funcdef_vars ):
+                           yield ( lino, input_line, fline )
+                        funcdef_vars = {}
+                     # --
+                  # --
+            else:
+               yield ( lino, input_line, line )
+
+
+      if funcdef_vars:
+         raise ValueError ( "unterminated funcdef", funcdef_vars )
+
+
+   def _xform_rstrip_line ( self, line ):
+      return line.rstrip() if line else line
+
+   preprocess_xform_line = _xform_rstrip_line
+   process_xform_line    = _xform_rstrip_line
+
+
+def get_argparser():
+   def arg_is_vdef ( v ):
+      if not v:
+         raise argparse.ArgumentTypeError ( "must not be empty." )
+      else:
+         key, sepa, val = v.partition ( '=' )
+         if not sepa:
+            raise argparse.ArgumentTypeError ( "missing '='" )
+
+         return ( key, val )
+
+   parser = argparse.ArgumentParser()
+
+   parser.add_argument ( 'infiles', nargs='*', default=[] )
+
+   parser.add_argument (
+      '-V', '--vdef', default=[], action='append', type=arg_is_vdef
+   )
+   parser.add_argument ( '-O', '--outfile', default='-' )
+
+   parser.add_argument (
+      '-k', '--keep-going', default=False, action='store_true'
+   )
+
+   parser.add_argument (
+      '-F', '--vdef-file', dest='vdef_files', default=[], action='append'
+   )
+
+   parser.add_argument (
+      '--mode', metavar='<mode>', dest='mode', default=None,
+      choices=[ 'edit', 'multi-edit', 'list' ]
+   )
+
+   add_mode_arg = lambda shortopt, longopt, mode_name, **kw: (
+      parser.add_argument (
+         shortopt, longopt,
+         dest='mode', default=argparse.SUPPRESS,
+         action='store_const', const=mode_name, **kw
+      )
+   )
+
+   add_mode_arg ( '-E', '--edit',       'edit' )
+   add_mode_arg ( '-L', '--list',       'list' )
+   add_mode_arg ( '-M', '--multi-edit', 'multi-edit' )
+
+   return parser
+
+
+def add_default_metavars_shell ( metavars_dict, config ):
+   weakdef = metavars_dict.weakdef
+
+   if config.get('shell') == 'bash':
+      weakdef ( 'SHELL', '${SHELL:?}' )
+   else:
+      weakdef ( 'SHELL', 'sh' )
+
+   weakdef ( 'SPACE',        r' ' )
+   weakdef ( 'NEWLINE',      os.linesep )
+   weakdef ( 'BACKSLASH',    chr(0x5c) )
+   weakdef ( 'BSNL',         (chr(0x5c) + os.linesep) )
+   weakdef ( 'NL',           os.linesep )
+
+   weakdef ( 'NOP',          r'true' )
+   weakdef ( 'ECHO',         r'printf "%s\n"' )
+   weakdef ( 'ECHON',        r'printf "%s"' )
+   weakdef ( '$',            r'\$' )
+   weakdef ( 'Q',            r'\'' )
+   weakdef ( 'QQ',           r'\"' )
+   weakdef ( 'NO_STDOUT',    r'1>>/dev/null' )
+   weakdef ( 'NO_STDERR',    r'2>>/dev/null' )
+   weakdef ( 'NO_STDIN',     r'0</dev/null'  )
+   weakdef ( 'QUIET',        r'1>>/dev/null 2>&1' )
+   weakdef ( 'SHIFT_OR_RET',
+      (
+         r'shift || return '
+         + str(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
+      )
+   )
+   weakdef ( 'SHIFT_OR_DIE',
+      (
+         r'shift || die "shift returned non-zero." '
+         + str(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
+      )
+   )
+
+   weakdef ( 'HLINE',       (79 * '-') )
+   weakdef ( 'HCLINE',      (76 * '-') )
+   weakdef ( 'HLINE_BOLD',  (79 * '=') )
+   weakdef ( 'HCLINE_BOLD', (76 * '=') )
+
+   weakdef ( 'STR_TRIM',
+      "sed -r -e 's,^\s+,,' -e 's,\s+$,,' -e 's,\s+, ,g'"
+   )
+   weakdef ( 'STR_STRIP',  "sed -r -e 's,^\s+,,' -e 's,\s+$,,'" )
+   weakdef ( 'STR_RSTRIP', "sed -r -e 's,\s+$,,'" )
+   weakdef ( 'STR_LSTRIP', "sed -r -e 's,^\s+,,'" )
+   weakdef ( 'STR_UPPER',  "tr '[:lower:]' '[:upper:]'" )
+   weakdef ( 'STR_LOWER',  "tr '[:upper:]' '[:lower:]'" )
+
+   weakdef ( 'IS_INIT',           '[ $$ -eq 1 ]' )
+   weakdef ( 'IS_SYSTEMD_BOOTED', '[ -d "/run/systemd/system" ]' )
+   weakdef ( 'IS_OPENRC_BOOTED',  '[ -e "/run/openrc/softlevel" ]' )
+
+   for name, prog_name, default_opts, is_varprog in [
+      ( 'chdir',   'cd',   '-P', False ),
+      ( 'mkdir',   None,   None, False ),
+      ( 'mkdirp', 'mkdir', '-p', False ),
+   ]:
+      upname = name.upper().replace('-','_')
+
+      if is_varprog:
+         prog_fmt = '${{X_{upname}:-{prog}}}'
+      else:
+         prog_fmt = '{prog}'
+
+      weakdef (
+         upname,
+         (
+            prog_fmt
+            + ' ${{{upname}_OPTS--{default_opts}}} ${{{upname}_OPTS_APPEND--}}'
+         ).format (
+            name         = name,
+            upname       = upname,
+            prog         = (prog_name or name),
+            default_opts = (default_opts or ''),
+         )
+      )
+   # --
+
+   for defsym_table_name in sorted(SHELL_DEFSYMS):
+      defsym_table = SHELL_DEFSYMS [defsym_table_name]
+
+      for varname in sorted(defsym_table):
+         weakdef ( varname, defsym_table [varname].value )
+      # --
+   # --
+
+   for varname in sorted(SHELL_DEFSYM_SYSEXITS):
+      if varname[:3] == 'EX_':
+         weakdef (
+            ( 'RET' + varname[2:] ),
+            ( 'return ' + str((SHELL_DEFSYM_SYSEXITS[varname]).value) )
+         )
+
+def process_infiles ( outfile, reader, metavars_dict, infiles, **kwargs ):
+   close_outstream = False
+   if outfile == '-':
+      outstream = sys.stdout
+   else:
+      outstream       = open ( outfile, 'wt' )
+      close_outstream = True
+
+   try:
+      write_outstream = outstream.write
+
+      for infile in infiles:
+         for lino, input_line, output_line in reader.process_file (
+            metavars_dict.fork(), infile, **kwargs
+         ):
+            write_outstream ( output_line )
+            write_outstream ( '\n' )
+   finally:
+      if close_outstream:
+         outstream.close()
+
+def read_vdef_files ( mvars, vdef_files ):
+   # * we do not allow '$' as name here
+   # * lowercase, but not mixed key vars are allowed for internal usage
+   #
+   re_line = re.compile (
+      (
+         '^(?P<name>(:?[a-z_][a-z_0-9]*|[A-Z_][A-Z_0-9]*))\s*(?P<op>:?=)'
+         '(?P<raw_val>\s*(?P<val>.*?)\s*)'
+         '(?:[|])?$'
+      )
+   )
+
+   str_formatter = string.Formatter()
+   vformat       = str_formatter.vformat
+
+   stripspace  = True
+   want_format = False
+
+   for vdef_file in vdef_files:
+      with open ( vdef_file, 'rt' ) as fh:
+         for lino, raw_line in enumerate(fh):
+            _line = strip_newline ( raw_line )
+            sline = _line.strip()
+
+            line = sline if stripspace else _line
+
+            if not sline or sline[0] == '#':
+               pass
+
+            elif sline[0] == '!':
+               cmd = sline[1:]
+               if cmd == 'stripspace':
+                  stripspace = True
+               elif cmd == 'keepspace':
+                  stripspace = False
+               elif cmd == 'format':
+                  want_format = True
+               elif cmd == 'noformat':
+                  want_format = False
+               else:
+                  raise ValueError ( vdef_file, (lino+1), line, cmd )
+
+            else:
+               line_match = re_line.match ( line )
+               if line_match is None:
+                  raise ValueError ( vdef_file, (lino+1), line )
+
+               name, op = line_match.group ( 'name', 'op' )
+
+               if op == '=' or name not in mvars:
+                  val = line_match.group (
+                     ('val' if stripspace else 'raw_val')
+                  )
+
+                  if want_format and val:
+                     val = vformat ( val, ( 'name', ), mvars )
+
+                  mvars [name] = (val or '')
+
+            # --
+         # -- end for
+      # -- end with
+   # -- end for
+# --- end of read_vdef_files (...) ---
+
+def main():
+   parser          = get_argparser()
+   argv_config     = parser.parse_args()
+   config          = {}
+   mode            = argv_config.mode
+
+   reader          = MetavarShellFileReader()
+   reader.add_default_builtins ( config )
+
+   metavars_dict   = VarsDict()
+   read_vdef_files ( metavars_dict, argv_config.vdef_files )
+   for vdef_key, vdef_val in argv_config.vdef:
+      metavars_dict [vdef_key] = vdef_val
+
+   add_default_metavars_shell ( metavars_dict, config )
+
+
+   if mode is None or mode == 'edit':
+      process_infiles (
+         argv_config.outfile,
+         reader, metavars_dict,
+         ( argv_config.infiles or ['-'] ),
+         keep_going=argv_config.keep_going
+      )
+
+   elif mode == 'multi-edit':
+
+      for infile_arg in argv_config.infiles:
+         infile_strlist, sepa, outfile = infile_arg.rpartition('=')
+         if not sepa or not outfile: raise ValueError(infile_arg)
+
+         infiles = [ s for s in infile_strlist.split(',') if s ]
+         if not infiles: raise ValueError(infile_arg)
+
+         process_infiles (
+            outfile, reader, metavars_dict, infiles,
+            keep_going=argv_config.keep_going
+         )
+      # --
+
+   elif mode == 'list':
+      metavars = set()
+
+      for infile in argv_config.infiles:
+         # or expand
+         for (
+            lino, input_line, instruction, line_obj
+         ) in reader.preprocess_file ( infile ):
+            if isinstance ( line_obj, MetavarTextLine ):
+               for mref in line_obj.metavar_refs:
+                  metavars.add ( mref.name )
+
+      print('\n'.join(sorted(metavars)))
+
+
+   else:
+      return os.EX_SOFTWARE
+
+
+def run_main ( main_func, *args, **kwargs ):
+   try:
+      excode = main_func ( *args, **kwargs )
+
+   except KeyboardInterrupt:
+      excode = os.EX_OK ^ 130
+
+   else:
+      if excode is None or excode is True:
+         excode = os.EX_OK
+      elif excode is False:
+         excode = os.EX_OK ^ 1
+
+   return excode
+
+
+if __name__ == '__main__':
+   sys.exit ( run_main ( main ) )

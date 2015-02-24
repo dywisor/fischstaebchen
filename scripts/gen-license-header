@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+
+from __future__ import absolute_import
+from __future__ import unicode_literals, division, generators
+from __future__ import print_function, nested_scopes, with_statement
+
+import argparse
+import codecs
+import os
+import sys
+import string
+import time
+
+_string_types = ( str, )
+
+OBFUSCATE = lambda s: codecs.encode(s,'rot13').replace('@','!!!')
+
+# ( year_str, name, OBFUSCATE(mail) )
+AUTHORS = [
+   ( '2014-{this_year}', 'Andr\xe9 Erdmann', 'qljv!!!znvyreq.qr' )
+]
+
+
+
+def gen_mit_license_header ( authors ):
+   ## encode(,rot13)==decode(,rot13)
+   M = lambda s: codecs.decode(s,'rot13').replace('!!!','@')
+
+   formatter = string.Formatter()
+   vformat   = formatter.vformat
+   this_year = time.gmtime()[0]
+
+
+   for years, name, mail in authors:
+      yield vformat (
+         'Copyright (c) {0} {1} <{2}>',
+         (
+            vformat ( years, (), { 'this_year': this_year } ),
+            name,
+            M(mail)
+         ),
+         {}
+      )
+
+   yield ''
+
+   yield 'Distributed under the terms of the MIT license.'
+   yield '(See LICENSE.MIT or http://opensource.org/licenses/MIT)'
+# --
+
+def main():
+   parser = argparse.ArgumentParser()
+
+   parser.add_argument (
+      '-F', '--outformat', choices=['txt','sh','C'], default='txt'
+   )
+
+   config    = parser.parse_args()
+
+   license_lines_gen = gen_mit_license_header(AUTHORS)
+
+   if config.outformat is None or config.outformat == 'txt':
+      sys.stdout.write ( '\n'.join ( license_lines_gen ) + '\n' )
+
+   elif config.outformat == 'sh':
+      sys.stdout.write (
+         '\n'.join ( ( ('## ' + l).rstrip() for l in license_lines_gen ) )
+         + '\n##\n'
+      )
+
+   elif config.outformat == 'C':
+      sys.stdout.write (
+         '/*\n' +
+         '\n'.join ( ( (' * ' + l).rstrip() for l in license_lines_gen ) )
+         + '\n */\n\n'
+      )
+
+   else:
+      return False
+
+
+
+
+
+def run_main ( main_func, *args, **kwargs ):
+   try:
+      excode = main_func ( *args, **kwargs )
+
+   except KeyboardInterrupt:
+      excode = os.EX_OK ^ 130
+
+   else:
+      if excode is None or excode is True:
+         excode = os.EX_OK
+      elif excode is False:
+         excode = os.EX_OK ^ 1
+
+   return excode
+
+
+if __name__ == '__main__':
+   sys.exit ( run_main ( main ) )

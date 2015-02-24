@@ -1,0 +1,61 @@
+#!/bin/sh
+#  run-metash [-|--stdin] <srcdir> <outdir> -- <metash_basecmd>
+#
+
+read_stdin=false
+case "${1-}" in
+   '-'|'--stdin') read_stdin=true; shift ;;
+esac
+
+srcdir="${1:?<srcdir>}";   shift
+outdir="${1:?<outdir>}";   shift
+
+case "${1-}" in
+   '--') shift ;;
+   *) exit 64 ;;
+esac
+[ $# -gt 0 ] || exit 64
+
+
+srcdir_prefix="${srcdir%/}/"
+
+
+process_files_stdin() {
+   [ -n "${outdir?}" ] && \
+   mkdir -p -- "$(dirname "${outdir}")" || return
+
+   set -- "${@}" -M
+
+   while read -r srcfile; do
+      relpath=
+
+      case "${srcfile}" in
+         ''|*[\=\,]*)
+            return 2
+         ;;
+         "${srcdir_prefix}"?*)
+            relpath="${srcfile#${srcdir_prefix}}"
+         ;;
+         *)
+            return 1
+         ;;
+      esac
+      : ${relpath:?}
+
+      dstfile="${outdir:?}/${relpath}"
+
+      mkdir -p -- "$(dirname "${dstfile}")" || return
+
+      set -- "${@}" "${srcfile}=${dstfile}"
+   done
+
+   ##printf '%s' "$*"
+   "${@}"
+}
+
+if ${read_stdin}; then
+   process_files_stdin "${@}"
+else
+   find -H "${srcdir_prefix}" -type f | \
+      process_files_stdin "${@}"
+fi

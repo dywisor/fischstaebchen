@@ -1,0 +1,8 @@
+#!/bin/sh
+: ${TARGET_LD:?}
+
+if command -v "${TARGET_LD}.gold" 1>/dev/null 2>&1; then
+   exec "${TARGET_LD}.gold" "${@}"
+fi
+
+exec "${TARGET_LD}" "${@}"
