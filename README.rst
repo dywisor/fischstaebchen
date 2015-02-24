@@ -1,0 +1,1 @@
+.. include:: doc/init.rst
