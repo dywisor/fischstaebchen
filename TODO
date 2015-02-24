@@ -1,0 +1,33 @@
+# list of missing/incomplete/untested/broken features
+# in no specific order
+#
+# Format: <classification> <text>
+#
+# Classifications:
+# * TODO          --  things that should be done and I'm interested
+#                     in implementing these
+# * INCOMPLETE    --  feature is incomplete and not top-priority for me
+# * ENHANCEMENT   --  missing feature I'm not really interested in
+#                      (That usually means that I'd accept patches for it.)
+# * BROKEN        --  broken
+# * TESTING       --  needs further testing
+#
+
+TODO            documentation.
+TODO            buildroot package: set XSHELL
+TODO            buildroot: defconfig
+____            buildroot: remove==upstream apt-cacher-ng package
+TODO            stagedive: inject VOLATILE_ROOTFS_*FILE, dont reparse
+TODO            stagedive: uclibc TZ
+TODO            stagedive: refactor parser
+TODO            stagedive bootstrap: optionally keep gentoo stage3 file
+TODO            overlay, init: phase-retry
+                 (requires thoroughly-defined boot-phase status)
+TODO            init: consider using posix_spawn()/vfork() instead of fork()
+INCOMPLETE      only rudimentary support for mdadm/lvm
+ENHANCEMENT     metash.py is just ugly.
+ENHANCEMENT     networking supports DHCP only
+ENHANCEMENT     no resume from hibernate
+ENHANCEMENT     load keymap during boot
+ENHANCEMENT     no cryptsetup (luks), *cache, dmraid
+ENHANCEMENT     stagedive: write to disk
