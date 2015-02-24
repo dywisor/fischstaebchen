@@ -1,0 +1,93 @@
+#!/bin/sh
+# Usage: get-arch-bootstrap-uri [-x|-s] <arch> [<http_mirror> [<proxy>]]
+#
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+
+set -fu
+
+DEFAULT_HTTP_MIRROR="ftp-stud.hs-esslingen.de"
+
+output_format=simple
+case "${1-}" in
+   '--export'|'-x') output_format='export'; shift || exit ;;
+   '--simple'|'-s') output_format='simple'; shift || exit ;;
+esac
+
+target_arch="${1:?<arch> arg}"
+case "${target_arch}" in
+   amd64) target_arch=x86_64 ;;
+   x86)   target_arch=i686   ;;
+esac
+
+case "${2-}" in
+   ''|'-')
+      http_mirror="${DEFAULT_HTTP_MIRROR}"
+   ;;
+   http://*)
+      http_mirror="${2#http://}"
+   ;;
+   *)
+      http_mirror="${2}"
+   ;;
+esac
+
+proxy="${3-}"
+[ "${proxy}" != "-" ] || proxy=
+
+dist_uri_rel="/pub/Mirrors/archlinux/iso/latest"
+
+dist_uri_noproxy="http://${http_mirror}${dist_uri_rel}"
+dist_uri_proxy="http://${proxy:+${proxy}/}${http_mirror}${dist_uri_rel}"
+
+vassign()  { printf "%s=%s%s%s\n" "${1:?}" "\"" "${2?}" "\""; }
+if [ -n "${VPREFIX-}" ]; then
+avassign() { vassign "${VPREFIX:?}${1:?}" "${2?}"; }
+else
+avassign() { vassign "arch_bootstrap_${1:?}" "${2?}"; }
+fi
+
+wget -q -O - "${dist_uri_noproxy}/md5sums.txt" | \
+{
+   # in-subshell:
+   while read -r md5 fname BOGUS; do
+      if [ -z "${md5}" ] || [ "${md5#\#}" != "${md5}" ]; then
+         true
+
+      elif [ -n "${BOGUS-}" ]; then
+         printf '%s\n' "Unexpected input format." 1>&2
+         exit 9
+
+      else
+         case "${fname}" in
+            archlinux-bootstrap-????.??.??-${target_arch}.t*)
+               uri="${dist_uri_proxy}/${fname}"
+
+               case "${output_format}" in
+                  'simple')
+                     printf '%s\n' "${uri}"
+                     exit 0
+                  ;;
+
+                  'export')
+                     avassign path ""
+                     avassign name "${fname}"
+                     avassign md5  "${md5}"
+                     avassign uri  "${uri}"
+                     exit 0
+                  ;;
+
+                  *)
+                     exit 71
+                  ;;
+               esac
+            ;;
+         esac
+      fi
+   done
+
+   exit 3
+}

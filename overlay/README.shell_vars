@@ -1,0 +1,30 @@
+v0, v1, ... vN are result variables and
+* should be short-lived (read once after function return)
+* should be local variables if applicable
+  (local to the caller's scope unless that function returns v0/..., to)
+
+f() {
+   v0=1
+}
+
+good_func() {
+   local v0
+   f && [ "${v0}" = "1" ]
+}
+
+maybe_good_func() {
+   f && [ "${v0}" = "1" ]
+}
+
+bad_func() {
+   f && process "${v0}" && echo "f returned ${v0}"
+}
+
+
+t0, t1, ... tN are temporary variables and
+* should always be global
+* are not preserved between function calls
+
+for t0 in ... ; do
+   process "${t0}" || ewarn "Failed to process ${t0}" ## wrong!
+done

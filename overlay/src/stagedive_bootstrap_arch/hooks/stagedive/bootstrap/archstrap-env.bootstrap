@@ -1,0 +1,12 @@
+#!/bin/sh
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+loadscript_or_die "${STAGEDIVE_BOOTSTRAP_SRCDIR:?}/arch/archstrap-staging.sh"
+
+stagedive_bootstrap_default_init
+
+archstrap_staging_only
+ishare_add_flag keep-net

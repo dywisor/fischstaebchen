@@ -1,0 +1,240 @@
+#!/bin/sh
+set -u
+DEFAULT_IFS="${IFS}"
+
+die() {
+   printf '%s: %s\n' "${3:-died}" "${1:-unknown error.}" 1>&2
+   exit ${2:-2}
+}
+
+autodie() {
+   "${@}" || die "command '${*}' returned ${?}." ${?}
+}
+
+io_strip_fspath() {
+   sed -r \
+      -e 's,([^/])/+$,\1,' -e 's,/+,/,' \
+      -e 's,/[.]/,/,' -e 's,^[/]?[.][/]?$,.,' -e 's,/[.]$,,'
+}
+
+strip_fspath() { printf "%s" "${1}" | io_strip_fspath; }
+
+
+fspath_arg() {
+   v0=
+   [ -n "${1-}" ] && v0="$(strip_fspath "${1}")" && [ -n "${v0}" ]
+}
+
+set -- "${@}" ^^^
+
+layer_root=
+last_branch_is_ov_dir=
+overlay_mnt_dst=
+
+while [ $# -gt 0 ]; do
+   case "${1}" in
+      '^^^')
+         break
+      ;;
+      '--')
+         shift
+         break
+      ;;
+      '')
+         :
+      ;;
+      '-L'|'--layer-root')
+         autodie fspath_arg "${2-}"
+         layer_root="${v0}"
+         shift 2
+      ;;
+      '-M'|'--mem')
+         last_branch_is_ov_dir=y
+         shift
+      ;;
+      '-h'|'--help')
+         printf 'Usage: aufs-overlayfs-genscript %s\n' \
+            "[-M] -L <dir> <branch>... <overlay>"
+         exit 0
+      ;;
+      *)
+         set -- "${@}" "${1}"
+         shift
+      ;;
+   esac
+done
+
+while [ $# -gt 0 ]; do
+   case "${1}" in
+      '^^^')
+         shift
+         break
+      ;;
+      *)
+         set -- "${@}" "${1}"
+         shift
+      ;;
+   esac
+done
+
+[ -n "${1-}" ] && [ -n "${2-}" ] || \
+   die "missing branches and/or mountpoint arg!" 64
+
+branches=
+add_branches() {
+   local br
+
+   # "IFS=...", "set -f" set by caller
+   for br in ${*}; do
+      case "${br}" in
+         '')
+            :
+         ;;
+         *=*=*)
+            die "bad branch: ${br}"
+         ;;
+         /*=r[row])
+            branches="${br} ${branches}"
+         ;;
+         *=*)
+            die "bad branch: ${br}"
+         ;;
+         /*)
+            branches="${br}=rw ${branches}"
+         ;;
+         *)
+            die "bad branch: ${br}"
+         ;;
+      esac
+   done
+}
+
+
+set -f
+IFS="${DEFAULT_IFS}:"
+while [ $# -gt 1 ]; do
+   add_branches "${1}" || die
+   shift
+done
+IFS="${DEFAULT_IFS}"
+
+fspath_arg "${1-}" || die "missing or invalid mountpoint arg!" 64
+overlay_mnt_dst="${v0}"
+#shift;
+set -- ${branches}
+set +f
+
+[ $# -gt 0     ] || die "no branches specified!"
+[ $# -lt 10000 ] || die "too many branches!"  ## printf %04d
+
+[ -n "${layer_root}" ] || die "missing --layer-root (-L) arg!" 64
+
+## get_branch_vars ( idx, branch_str )
+get_branch_vars() {
+   idx_str="$(printf "%04d" "${1}")"; : ${idx_str:?}
+
+   branch_mode="${2##*=}"; : ${branch_mode:?}
+   case "${branch_mode}" in
+      ro|rr)
+         branch_mnt_mode=ro
+      ;;
+      rw)
+         branch_mnt_mode=rw
+      ;;
+      *)
+         return 5
+      ;;
+   esac
+
+   branch_src="${2%=*}"; : ${branch_src:?}
+
+   branch_name="${branch_src##*/}"; : ${branch_name:=rootfs}
+   branch_idx_name="${idx_str}_${branch_name}"
+}
+
+## print_cmdstr ( *<str> )
+print_cmdstr() {
+   printf '%s%s\n' "${AOV_CMD_PREFIX:+${AOV_CMD_PREFIX} }" "${*}"
+}
+
+## print_mkdirp ( *dirs )
+print_mkdirp() {
+   local s
+
+   s=
+   while [ $# -gt 0 ]; do s="${s} \"${1}\""; shift; done
+   s="${s# }"
+
+   [ -z "${s}" ] || print_cmdstr "mkdir -p -- ${s}"
+}
+
+## _print_mount_overlay ( mode, lowerdir, upperdir, workdir, mountpoint, lowerdir_opt_name:="lowerdir" )
+_print_mount_overlay() {
+   print_cmdstr \
+"mount -t overlay -o \"${1:?},${6:-lowerdir}=${2:?},upperdir=${3:?},workdir=${4:?}\" overlay \"${5:?}\""
+}
+
+## print_mount_overlay ( mode, lowerdir, upperdir, workdir, mountpoint )
+print_mount_overlay() {
+   print_mkdirp "${5}" && _print_mount_overlay "${@}"
+}
+
+## print_mount_bind ( src, dst, [mode] )
+print_mount_bind() {
+   : "${1:?}" "${2:?}"
+
+   print_mkdirp "${1}" "${2}" && \
+   print_cmdstr "mount --bind \"${1}\" \"${2}\"" || return
+
+   [ -z "${3-}" ] || print_cmdstr "mount -o remount,bind,${3} \"${2}\""
+}
+
+
+if [ $# -eq 1 ]; then
+   die "need more than one branch."
+##   autodie get_branch_vars 1 "${br}"
+##   print_mount_bind "${branch_src}" "${overlay_mnt_dst}" "${branch_mode}"
+
+else
+
+   lowerdirs=
+   while [ $# -gt 1 ]; do
+      autodie get_branch_vars 0 "${1:?}"
+      lowerdirs="${branch_src}:${lowerdirs}"
+      shift
+   done
+
+   lowerdirs="${lowerdirs%:}"
+   : ${lowerdirs:?}
+
+   autodie get_branch_vars 1 "${1:?}"
+
+   case "${branch_src}" in
+      */data)
+         branch_src="${branch_src%/data}"
+
+         print_cmdstr \
+"[ -d \"${branch_src}/workdir\" ] || {
+   printf \"%s\\n\" \"toplevel branch is not a suitable overlay dir.\" 1>&2;
+   exit 5;
+}"
+      ;;
+
+      *)
+         if [ -z "${last_branch_is_ov_dir}" ]; then
+            die "not supported: last branch is not a suitable overlay dir!"
+         fi
+      ;;
+   esac
+
+   if [ -n "${last_branch_is_ov_dir}" ]; then
+      print_mkdirp "${branch_src}/data" "${branch_src}/workdir"
+   fi
+
+   print_mount_overlay \
+      "${branch_mnt_mode}" \
+      "${lowerdirs}" \
+      "${branch_src}/data" "${branch_src}/workdir" \
+      "${overlay_mnt_dst}"
+
+fi

@@ -1,0 +1,81 @@
+!noformat
+!stripspace
+
+EX_REMOUNT_ERR = 223
+q  = '
+qq = "
+
+!format
+
+S_KEYOF1 = ${{1%%=*}}
+S_VALOF1 = ${{1#*=}}
+KEYOF1   = {qq}{S_KEYOF1}{qq}
+VALOF1   = {qq}{S_VALOF1}{qq}
+
+DEFAULT_ISHARE_CFG        = /run/initramfs/config
+DEFAULT_INITRAMFS_DATADIR = /init.d
+#DEFAULT_IHOOK
+#DEFAULT_ISHARE_HOOKS
+#DEFAULT_INITRAMFS_LOGFILE
+
+DEFAULT_NEWROOT       = /newroot
+NEWROOT_FIRMWARE_DIR := /lib/firmware
+NEWROOT_MODULES_DIR  := /lib/modules
+NEWROOT_CONFDIR      := /initramfs-config
+NEWROOT_HOOKDIR      := {NEWROOT_CONFDIR}/hooks
+
+
+IFUP_ESSENTIAL_DIRS = pre-up up post-up pre-down down post-down
+
+
+BUSYBOX        = /bin/busybox
+BB             = ${{BB:-{BUSYBOX}}}
+BB_APPLET      = {BB}
+XSHELL         = {BUSYBOX} sh
+
+
+IHOOK          = ${{IHOOK:?}}
+ISHARE_HOOKS   = ${{ISHARE_HOOKS:?}}
+ISHARE_CFG     = ${{ISHARE_CFG:?}}
+
+IHASFLAG       = test -e {ISHARE_CFG}
+INOFLAG        = test ! -e {ISHARE_CFG}
+
+ALLOW_NEWROOT_CONFIG = false
+
+PROG_UNTAR     = /bin/untar
+PROG_FILESCAN  = /bin/filescan
+PROG_FILESIZE  = /bin/filesize
+
+DBGTRACE       =
+DBGTRACE_FUNC  =
+DBGTRACE_CMD   =
+
+#DBGTRACE       = __dbgtrace{SPACE}
+#DBGTRACE_FUNC  = __dbgtrace_function{SPACE}
+#DBGTRACE_CMD   = __dbgtrace{SPACE}
+
+EXPERIMENTAL = 0
+
+FEATURE_PHASE_RETRY = 1
+ALLOW_NEWROOT_HOOKS = 1
+
+# you really want to set this to 1 if coreutils are available
+HAVE_COREUTILS = 0
+#PROG_REALPATH = /usr/bin/realpath
+
+# set to 1 for loading microcode files
+HAVE_IUCODE_TOOL = 0
+#IUCODE_TOOL = /usr/sbin/iucode_tool
+
+SELF_DESTRUCTIVE = 0
+
+PHASEOUT_RUN_HOOKS_IN_PARALLEL = 1
+
+GITHUB_ARCHIVE_TYPE   = https
+GITHUB_ARCHIVE_SITE   = api.github.com/repos
+
+
+DOTFILES_TBT_SRC_SITE = github://dywisor/things-beyond-things
+
+WGET_OPTS =

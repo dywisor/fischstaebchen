@@ -1,0 +1,44 @@
+# TODO
+
+# list of functions:
+#  (void return type usually implies autodie behavior)
+
+# void union_mount_set_fstype()                  -- [fstype_override]
+
+# void union_mount_init_initramfs()              -- rel_mp, [name]
+# void union_mount_init_newroot()                -- rel_mp, [name]
+# void union_mount_init_newroot_moving()         -- [name]
+# void union_mount_init_newroot_itself()         -- {}
+
+
+# void union_mount_get_container_in_newroot()    -- [name]
+
+
+# int  union_mount_set_file()                    -- relpath
+# int  union_mount_find_file()                   -- basepath...
+# int  union_mount_set_or_find_file()            -- relpath, basepath...
+
+# void union_mount_expand_incremental()          -- {}
+# int  union_mount_add_overlay_files()           -- relpath...
+
+
+# void union_mount_sfs_files()                   -- {}
+# void union_copy_and_mount_sfs_files()          -- {}
+
+
+# void union_mount_add_backing_disk_ro()         -- disk, [fstype], [opts]
+# void union_mount_add_backing_disk_rr()         -- disk, [fstype], [opts]
+# void union_mount_add_backing_disk_rw()         -- disk, [fstype], [opts]
+# void union_mount_add_backing_disk_ro_or_rw()   -- word, disk, [fstype], [opts]
+
+
+# void union_mount_add_backing_mem()             -- type, [size]
+
+
+# void union_mount_aufs()                        -- [mp]
+# @DIE union_mount_overlayfs()                   -- [mp]
+# void union_mount_it()                          -- [mp]
+
+# void union_mount_zap_vars()                    -- {}
+# int  union_mount_add_branch()                  -- mode, [branch...]
+# void union_mount_set_container_path()          -- path

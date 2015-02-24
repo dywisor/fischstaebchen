@@ -1,0 +1,263 @@
+#!/bin/busybox sh
+##  union mount parser script template
+##
+##   F         -- func base name
+##   V         -- var name prefix
+##   FLAGFILE  -- flag file
+##   CALLBACK  -- additional parser function or ""
+##
+##
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+
+: ${@V@_FILE=}
+: ${@V@_OVERLAY_FILES=}
+: ${@V@_TARBALL_FILES=}
+: ${@V@_TARBALL_LOWLAYER_FILES=}
+
+: ${@V@_BACKING_DISK=}
+: ${@V@_BACKING_DISK_TYPE=}
+: ${@V@_BACKING_DISK_OPTS=}
+
+: ${@V@_BACKING_MEM=zram}
+: ${@V@_BACKING_MEM_SIZE=}
+
+: ${@V@_COPY_FILES_TO_MEM=}
+## !!! incremental does not work when importing files via http/ftp
+: ${@V@_OVERLAY_INCREMENTAL=}  # DEPRECATED
+
+: ${@V@_WANT_ROTATE_FILE=}
+: ${@V@_WANT_RESQUASH=}  # NOT IMPLEMENTED
+                         # (and probably won't add -- how to handle backing disks?)
+
+
+## int parse_@F@ ( <args_ignored>, **key, **value, **value_components )
+##
+parse_@F@() {
+   parse_remux_key "@F@"
+}
+
+## int parse_@F@_done()
+##
+##  Note: may be overriden, but should call _parse_@F@_done().
+##
+parse_@F@_done() {
+   _parse_@F@_done
+}
+
+## void _parse_@F@_done()
+##
+_parse_@F@_done() {
+   : ${@V@_COPY_FILES_TO_MEM:=n}
+   : ${@V@_OVERLAY_INCREMENTAL:=n}  # DEPRECATED
+   : ${@V@_WANT_ROTATE_FILE:=n}
+   : ${@V@_WANT_RESQUASH:=n} # NOT IMPLEMENTED
+
+   add_env_var \
+      @V@_FILE                     \
+      @V@_WANT_ROTATE_FILE         \
+      @V@_WANT_RESQUASH            \
+      @V@_OVERLAY_FILES            \
+      @V@_TARBALL_FILES            \
+      @V@_TARBALL_LOWLAYER_FILES   \
+      \
+      @V@_BACKING_DISK             \
+      @V@_BACKING_DISK_TYPE        \
+      @V@_BACKING_DISK_OPTS        \
+      \
+      @V@_BACKING_MEM              \
+      @V@_BACKING_MEM_SIZE         \
+      \
+      @V@_COPY_FILES_TO_MEM        \
+      @V@_OVERLAY_INCREMENTAL
+
+   return 0
+}
+
+## void __parse_@F@ ( arg )
+##
+__parse_@F@() {
+   local v0
+
+   if [ -n "@FLAGFILE@" ]; then
+      ishare_add_flag "@FLAGFILE@"
+   fi
+
+   while [ $# -gt 0 ]; do
+
+      if [ "${1}" = "yes" ]; then
+         true
+
+      elif arg_is_file_uri "${1}"; then
+         @V@_FILE="${v0}"
+
+      elif [ -n "@CALLBACK@" ] && \
+         @CALLBACK@ "${1}"
+      then
+         true
+
+      else
+         case "${1}" in
+
+            ## base squashfs params
+            ##
+            auto)
+               @V@_FILE=auto
+            ;;
+
+            nofile)
+               @V@_FILE=none
+            ;;
+
+            volatile|copy|import)
+               @V@_COPY_FILES_TO_MEM=y
+            ;;
+
+            no_volatile|no_copy|no_import)
+               @V@_COPY_FILES_TO_MEM=n
+            ;;
+
+            rotate|rot)
+               @V@_WANT_ROTATE_FILE=y
+            ;;
+
+            no_rotate)
+               @V@_WANT_ROTATE_FILE=n
+            ;;
+
+            resquash)
+               @V@_WANT_RESQUASH=y
+            ;;
+
+            no_resquash)
+               @V@_WANT_RESQUASH=n
+            ;;
+
+
+            ## overlay squashfs params
+            ##
+            overlay=|no_overlay)
+               @V@_OVERLAY_FILES=
+               @V@_OVERLAY_INCREMENTAL=n
+            ;;
+
+            overlay=incremental)
+               @V@_OVERLAY_INCREMENTAL=y
+            ;;
+
+            overlay=*)
+               if ! arg_is_file_uri "${1#*=}"; then
+                  true
+               elif [ -z "${@V@_OVERLAY_FILES-}" ]; then
+                  @V@_OVERLAY_FILES="${v0}"
+               else
+                  @V@_OVERLAY_FILES="${@V@_OVERLAY_FILES} ${v0}"
+               fi
+            ;;
+
+            ## low-layer tarball files (below squashfs layer)
+            ##
+            low_tarball=|ltb=|no_low_tarball|no_ltb)
+               @V@_TARBALL_LOWLAYER_FILES=
+            ;;
+
+            low_tarball=*|ltb=*)
+               if ! arg_is_file_uri "${1#*=}"; then
+                  true
+               elif [ -z "${@V@_TARBALL_LOWLAYER_FILES-}" ]; then
+                  @V@_TARBALL_LOWLAYER_FILES="${v0}"
+               else
+                  @V@_TARBALL_LOWLAYER_FILES="${@V@_TARBALL_LOWLAYER_FILES} ${v0}"
+               fi
+            ;;
+
+            ## tarball files
+            ##
+            tarball=|tb=|no_tarball|no_tb)
+               @V@_TARBALL_FILES=
+            ;;
+
+            tarball=*|tb=*)
+               if ! arg_is_file_uri "${1#*=}"; then
+                  true
+               elif [ -z "${@V@_TARBALL_FILES-}" ]; then
+                  @V@_TARBALL_FILES="${v0}"
+               else
+                  @V@_TARBALL_FILES="${@V@_TARBALL_FILES} ${v0}"
+               fi
+            ;;
+
+
+            ## backing disk
+            ##  the cmdline parser supports only *one* disk,
+            ##   the union_mount module is able to handle an arbitrary number
+            ##
+            disk=|nodisk|no_disk)
+               @V@_BACKING_DISK=
+            ;;
+
+            disk=*)
+               @V@_BACKING_DISK="${1#*=}"
+            ;;
+
+            disk_type=*)
+               @V@_BACKING_DISK_TYPE="${1#*=}"
+            ;;
+
+            disk_opts|disk_flags=*)
+               @V@_BACKING_DISK_OPTS="${1#*=}"
+            ;;
+
+
+            ## backing memory
+            ##  only one supported mem mount supported so far
+            ##   (usage scenario for more than one backing mem would be
+            ##    fixed-size zram + tmpfs serving as fallback when zram is full)
+            ##
+            mem=|nomem|no_mem|nonmem)
+               @V@_BACKING_MEM=
+            ;;
+
+            mem)
+               @V@_BACKING_MEM=zram
+            ;;
+
+            mem=*)
+               @V@_BACKING_MEM="${1#*=}"
+            ;;
+
+            mem_size=*|size=*)
+               @V@_BACKING_MEM_SIZE="${1#*=}"
+            ;;
+
+
+            ## "special" parameters
+
+            ## rw adds backing mem if not already configured
+            rw)
+               if [ -z "${@V@_BACKING_DISK-}" ]; then
+                  : ${@V@_BACKING_MEM:=zram}
+               fi
+            ;;
+
+            ## copy,auto,mem
+            cam)
+               @V@_FILE=auto
+               @V@_BACKING_MEM=zram
+               @V@_COPY_FILES_TO_MEM=y
+            ;;
+         esac
+
+      fi
+
+      shift
+   done
+
+   return 0
+}
+
+## register @F@ parser
+add_parser "@F@"

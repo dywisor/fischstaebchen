@@ -1,0 +1,14 @@
+# This overlay does not provide anything.
+#
+# Basic support for separate /usr is built into the initramfs binary,
+# there are no additional requirements for simple disk mounts.
+#
+# For "extended" support,
+# one or more of the following overlay are required:
+#
+#  * union_mount  -- /usr as squashfs file, with or without backing disk/mem
+#  * misc         -- mdadm/lvm (not implemented so far(*))
+#
+#    (*) there is basic mdadm/lvm support in the initramfs binary, but
+#        it hasn't been tested at all
+#

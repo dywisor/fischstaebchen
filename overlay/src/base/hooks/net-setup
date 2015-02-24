@@ -1,0 +1,186 @@
+#!@@XSHELL@@
+#  Generates /etc/network/interfaces.
+##
+##  Creates a simple dhcp config if there's only one wired interface,
+##  else creates a dhcp-bridge over all wired interfaces.
+##
+##
+##  This script should be runnable without depending on any env var
+##  provided by the /init binary.
+##
+##
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+D=/etc/network
+
+if [ -z "${ISHARE_CFG-}" ]; then
+   printf "%s\n" "ISHARE_CFG is not set, defaulting it." 1>&2
+   ISHARE_CFG=@@DEFAULT_ISHARE_CFG@@
+fi
+
+RUNTIME_NETCONFIG_FILE="${ISHARE_CFG}/network_interfaces"
+RUNTIME_NETCONFIG_SHFILE="${ISHARE_CFG}/network_interfaces.sh"
+
+## create directories (exit early if /etc is readonly)
+mkdir -p -- "${D}" || exit
+
+## ifup complains if these directories are missing
+for p in @@IFUP_ESSENTIAL_DIRS@@; do \
+   mkdir -p -- "${D}/if-${p}.d" || @@NOP@@
+done
+
+## set up /etc/network/interfaces => %RUNTIME_NETCONFIG_FILE
+need_sym=y
+if \
+   test -h "${D}/interfaces" && \
+   ltarget="$(readlink -f "${D}/interfaces")"
+then
+   case "${ltarget}" in
+      "${RUNTIME_NETCONFIG_FILE}")
+         need_sym=
+      ;;
+   esac
+fi
+
+if [ -n "${need_sym}" ]; then
+   rm -f -- "${D}/interfaces"
+
+   if ! ln -f -s -- "${RUNTIME_NETCONFIG_FILE}" "${D}/interfaces"; then
+      printf '%s\n' "failed to set up symlink: ${D}/interfaces" 1>&2
+      exit 5
+   fi
+fi
+
+# get wired interfaces
+## * ethers      : definite list of wired interfaces
+## * ether_nocls : list of interfaces that could be wired
+##                  (lacking a class attribute, but matched by name)
+##
+##  %ether_nocls acts as fallback when %ethers is empty
+##  (which happens for e.g. virtio_net interfaces)
+##
+ethers=
+ether_nocls=
+for d in /sys/class/net/*; do
+   name="${d##*/}"
+   cls_f="${d}/device/class"
+   [ ! -e "${d}/device/ieee80211" ] || continue
+
+   if [ ! -r "${cls_f}" ]; then
+      case "${name}" in
+         eth*)
+            ether_nocls="${ether_nocls} ${name}"
+         ;;
+      esac
+
+      continue
+   fi
+
+   if { read -r cls < "${cls_f}"; }; then
+      case "${cls}" in
+         0x020000)
+            ethers="${ethers} ${name}"
+         ;;
+      esac
+   fi
+done
+
+# set argv := ethers || ether_nocls
+set -- ${ethers}
+[ $# -gt 0 ] || set -- ${ether_nocls}
+
+
+## (late) helper functions
+print_line() { printf "%s\n" "${*}"; }
+print_line_indent() { printf "   %s\n" "${*}"; }
+
+std_down_actions() {
+cat << EOF
+   post-up    mkdir -p -- @@ISHARE_CFG@@ || true
+   post-up    touch -- @@ISHARE_CFG@@/have-net || true
+   pre-down   umount -a -t nfs,cifs || true
+   pre-down   rm -f -- @@ISHARE_CFG@@/have-net || true
+EOF
+}
+
+begin_iface_config() {
+cat << EOF
+auto ${1}
+iface ${1} inet ${2}
+EOF
+}
+
+## unfortunately, "bridge_ports" etc. do not work with busybox' ifup,
+##  so we have to create the bridge on our own
+##
+gen_bridge_config() {
+   br_name="${1}"; shift
+
+   begin_iface_config "${br_name}" dhcp
+   std_down_actions
+
+cat << EOF
+   pre-up     test -d /sys/class/net/${br_name}/bridge || brctl addbr ${br_name}
+   pre-up     ip link set dev ${br_name} up || true
+EOF
+
+   for member in "$@"; do
+cat << EOF
+   pre-up     ip link set dev ${member} up
+   pre-up     brctl addif ${br_name} ${member}
+EOF
+   done
+
+   for member in "$@"; do
+cat << EOF
+   pre-down   brctl delif ${br_name} ${member} || true
+   pre-down   ip link set dev ${member} down || true
+EOF
+   done
+
+cat << EOF
+   post-down  brctl delbr ${br_name}
+EOF
+}
+
+# create %RUNTIME_NETCONFIG_FILE
+{
+   # always configure the loopback iface
+   begin_iface_config lo loopback
+
+   if [ $# -gt 0 ]; then
+      # >= 1 wired interfaces
+      print_line
+
+      if [ $# -eq 1 ]; then
+         # one interface - configure it directly
+         begin_iface_config "${1}" dhcp
+         std_down_actions
+      else
+         # if there's more than one interface, create a bridge over it
+         gen_bridge_config br0 "$@"
+      fi
+
+   fi
+} > "${RUNTIME_NETCONFIG_FILE}"
+
+print_vassign() {
+   printf '%s=%s%s%s\n' "${1:?}" "\"" "${2?}" "\""
+}
+
+# create %RUNTIME_NETCONFIG_SHFILE
+{
+   if [ $# -gt 0 ]; then
+      if [ $# -eq 1 ]; then
+         print_vassign net_iftype single
+      else
+         print_vassign net_iftype bridge
+      fi
+
+      print_vassign net_ifaces "${*}"
+      print_vassign net_ip4_addr dhcp
+   fi
+} > "${RUNTIME_NETCONFIG_SHFILE}"

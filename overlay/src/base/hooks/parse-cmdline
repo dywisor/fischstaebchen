@@ -1,0 +1,148 @@
+#!@@XSHELL@@
+#  this is the first hook - there's no env file to load and no hooks in $ISHARE
+##
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+
+# create empty env file
+mkdir -p -- "${IENV%/*}" && : > "${IENV}" || exit 8
+
+IFS_DEFAULT="${IFS}"
+
+. "@@FUNCTIONS@@" || exit 9
+
+__parser_list=
+add_parser() { __parser_list="${__parser_list# } ${*}"; }
+
+for parser in "@@IHOOK@@/parse-cmdline.d/"*; do
+   if [ -f "${parser}" ]; then
+      . "${parser}" || die
+   fi
+done
+__parser_list="${__parser_list# }"
+
+if [ -z "${__parser_list}" ]; then
+   exit 0
+fi
+
+split_str() {
+   #<%%retvar v0%>
+   <%%local IFS<=${1?}%>
+   set -- ${*}
+   <%%ifs%>
+   v0="${*}"
+}
+
+check_is_keepval() {
+   case "${1}" in
+      ''|none|keep|disable|_) return 0 ;;
+   esac
+   return 1
+}
+
+parse_remux_key() {
+   <%%varcheck 1%>
+   <%%locals _arg _val %>
+
+   case "${key}" in
+      "${1}")
+         #lazy-eval:
+         #"parse_${2:-${1}}_reinit" || die
+
+         "__parse_${2:-${1}}" ${value_components} || return
+
+         return 0
+      ;;
+
+      "${1}_"?*)
+         # <key>_<arg>[=[<val>...]]
+         #  reassemble as sequence of <arg>=<val> statements
+         #  (or <arg> if no value specified)
+
+         _arg="${key#${1}_}"
+
+         #lazy-eval:
+         #"parse_${2:-${1}}_reinit" || die
+
+         if [ "${have_value}" = "y" ]; then
+
+            for _val in ${value_components}; do
+               "__parse_${2:-${1}}" "${_arg}=${_val}" || return
+            done
+
+         else
+            "__parse_${2:-${1}}" "${_arg}" || return
+         fi
+
+         return 0
+      ;;
+   esac
+
+   return 1
+}
+
+arg_is_file_uri() {
+   <%%retvar v0 %>
+   <%%locals type srcpath uri %>
+
+   if preparse_file_uri "${1#file=}"; then
+      # for cmdline args, file= is the generic prefix for specifying a file
+      #  (file=nfs://srv/export/file)
+      v0="${uri}"
+      return 0
+
+   elif [ -n "${type}" ]; then
+      #ewarn "invalid file uri: ${1}"
+      die "invalid file uri: ${1}"
+      v0='!INVALID'
+      return 0
+   fi
+
+   v0=
+   return 1
+}
+
+do_parse_cmdline() {
+   <%%locals key value have_value value_components parser doshift v0 %>
+
+   while [ $# -gt 0 ]; do
+      case "${1}" in
+         *=*)
+            key="${1%%=*}"
+            value="${1#*=}"
+            have_value="${SHTRUE}"
+         ;;
+         *)
+            key="${1}"
+            #unset -v value
+            value=
+            have_value="${SHFALSE}"
+         ;;
+      esac
+      [ -n "${key}" ] || continue
+
+      split_str "," "${value}"
+      <%%v0 _ value_components %>
+
+      for parser in ${__parser_list}; do
+         doshift=1
+         if parse_${parser} "$@"; then
+            break
+         fi
+      done
+
+      if [ ${doshift} -lt 0 ]; then
+         break
+      elif [ ${doshift} -gt 0 ]; then
+         shift ${doshift} || exit
+      fi
+   done
+}
+
+
+##<%%foreach parser ${__parser_list} ::: autodie parse_${parser}_init %>
+do_parse_cmdline ${CMDLINE}
+<%%foreach parser ${__parser_list} ::: autodie parse_${parser}_done %>

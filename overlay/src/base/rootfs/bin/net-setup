@@ -1,0 +1,12 @@
+#!/bin/sh
+if \
+   [ -f /run/initramfs/config/have-net ] && \
+   [ -s /run/initramfs/config/network.interfaces ]
+then
+   printf "%s\n" "/etc/network/interfaces already set up." 1>&2
+
+else
+   ( . @@HOOKDIR@@/net-setup; ) || exit
+fi
+
+exec ifup -a

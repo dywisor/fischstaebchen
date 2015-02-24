@@ -1,0 +1,227 @@
+#!/bin/busybox sh
+##  union mount script template
+##
+##   V              -- varname prefix (e.g. USR_SFS)
+##   REL_MP         -- path relative to NEWROOT, with the leading "/"
+##   TRY_DISKMOUNT  -- shbool that controls whether a disk mount should be
+##                     attempted before mounting a union
+##   AUTO_FILES     -- allows to override the list of "auto sfs" files
+##                      (specify default to use the default list)
+##   IS_ROOTFS      -- shbool that controls whether /newroot itself gets
+##                     mounted (y) or any other mount in newroot (!=y)
+##
+##
+##
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+set -u
+
+my_um_need_union=y
+my_um_is_rw=n
+
+
+## %IS_ROOTFS%
+if [ "X@IS_ROOTFS@" = "Xy" ]; then
+   my_um_mp="${NEWROOT}"
+else
+   my_um_mp="${NEWROOT%/}@REL_MP@"
+fi
+
+
+## hookdir
+if [ -n "${@V@_HOOKDIR?}" ] && [ -d "${@V@_HOOKDIR?}" ]; then
+
+my_um_run_hook() {
+   UM_NAME="@V@"
+   UM_REL_MP="@REL_MP@"
+   UM_MP="${my_um_mp}"
+   UM_PHASE="${1:?}"
+   UM_HOOK="${@V@_HOOKDIR:?}/${1:?}.sh"
+   : ${UM_LAYER=}
+
+   if [ -f "${UM_HOOK}" ]; then
+      veinfo "Sourcing union mount hook ${UM_PHASE}"
+      loadscript_or_die "${UM_HOOK}"
+      UM_LAYER=
+   fi
+}
+
+if [ -d "${@V@_HOOKDIR:?}/layer" ]; then
+my_um_run_layer_hook() {
+   UM_LAYER="${1:?}"; my_um_run_hook "layer/${1:?}"
+}
+else
+my_um_run_layer_hook() { return 0; }
+fi
+
+else
+my_um_run_hook()       { return 0; }
+my_um_run_layer_hook() { return 0; }
+fi
+
+
+## %TRY_DISKMOUNT%
+if [ "X@TRY_DISKMOUNT@" = "Xy" ]; then
+   # try to mount @REL_MP@ as disk
+
+   my_um_need_union=n
+
+   if [ -z "${@V@_BACKING_DISK}" ]; then
+      # could peek at newroot for details about mounting @REL_MP@
+      my_um_need_union=y
+
+   elif \
+      [ "${@V@_FILE:-none}" != "none" ]       || \
+      [ -n "${@V@_OVERLAY_FILES}" ]           || \
+      [ -n "${@V@_TARBALL_FILES}" ]           || \
+      [ -n "${@V@_TARBALL_LOWLAYER_FILES}" ]  || \
+      [ -n "${@V@_BACKING_MEM}" ]
+   then
+      my_um_need_union=y
+   fi
+
+   if [ "${my_um_need_union:-X}" != "y" ]; then
+
+      xmount "${my_um_mp}" \
+         "${@V@_BACKING_DISK}" \
+         "${@V@_BACKING_DISK_TYPE:-auto}" \
+         "${@V@_BACKING_DISK_OPTS:-rw,noatime}"
+
+      ## really rw?
+      my_um_is_rw=y
+   fi
+fi
+
+## TRY_MEMMOUNT
+##   try to mount it as zram/tmpfs instance only
+##
+##  (not implemented)
+##
+
+
+if [ "${my_um_need_union:-X}" = "y" ]; then
+
+   ## initialize vars and dirs
+   auto_files="@AUTO_FILES@"
+   if [ "${auto_files}" = "default" ]; then
+      auto_files="@REL_MP@.sfs @REL_MP@.squashfs"
+   fi
+
+   union_mount_set_fstype
+
+   my_um_run_hook pre-init
+
+   ## %IS_ROOTFS%
+   if [ "X@IS_ROOTFS@" = "Xy" ]; then
+      union_mount_init_newroot_itself
+   else
+      union_mount_init_newroot @REL_MP@
+      autodie union_mount_get_container_in_newroot
+   fi
+
+   union_mount_set_import_all "${@V@_COPY_FILES_TO_MEM:-n}"
+   union_mount_rotate_files="${@V@_WANT_ROTATE_FILE:-n}"
+
+   my_um_run_hook post-init
+
+   ## stagedive_bootstrap *is* the lowest layer,
+   ##  but this hook is reserved for stagedive
+   my_um_run_hook stagedive_bootstrap
+
+   my_um_run_layer_hook lowest
+
+   ## mount low-layer tarballs, if any
+   my_um_run_layer_hook low-tarball
+   autodie union_mount_add_tarball_layer lower - - ${@V@_TARBALL_LOWLAYER_FILES}
+
+   ## set up squashfs layer(s)
+   my_um_run_layer_hook squashfs
+   case "${@V@_FILE:-none}" in
+      none)
+         true
+      ;;
+      auto)
+         autodie union_mount_find_file ${auto_files}
+      ;;
+      *)
+         autodie union_mount_set_file "${@V@_FILE}"
+      ;;
+   esac
+
+   if [ "${@V@_OVERLAY_INCREMENTAL:-n}" = "y" ]; then
+      ewarn "OVERLAY_INCREMENTAL is deprecated."
+      autodie union_mount_expand_incremental
+   fi
+
+   autodie union_mount_add_overlay_files ${@V@_OVERLAY_FILES}
+
+   ## mount squashfs layer(s)
+   autodie union_mount_sfs_files
+
+   ## mount tarballs, if any
+   my_um_run_layer_hook tarball
+   autodie union_mount_add_tarball_layer upper - - ${@V@_TARBALL_FILES}
+
+   ## %IS_ROOTFS%
+   if [ "X@IS_ROOTFS@" = "Xy" ]; then
+      # move /newroot to union
+      my_um_run_layer_hook newroot
+      if is_mounted "${NEWROOT}"; then
+         if union_mount_check_mountpoint_is_mem "${NEWROOT}"; then
+            newroot_is_mem=y
+         else
+            newroot_is_mem=
+         fi
+
+         autodie union_mount_add_move_mount "${NEWROOT}" rootfs
+         [ -z "${newroot_is_mem}" ] || \
+            union_mount_mark_prev_branch_as_mem
+      fi
+   fi
+
+   ## backing disk branch, if any
+   my_um_run_layer_hook disk
+   if [ -n "${@V@_BACKING_DISK}" ]; then
+      autodie union_mount_add_backing_disk_ro_or_rw \
+         "${@V@_BACKING_MEM}" \
+         "${@V@_BACKING_DISK}" \
+         "${@V@_BACKING_DISK_TYPE}" \
+         "${@V@_BACKING_DISK_OPTS}"
+
+      my_um_is_rw=y
+   fi
+
+   ## backing mem branch, if any
+   my_um_run_layer_hook mem
+   if [ -n "${@V@_BACKING_MEM}" ]; then
+      autodie union_mount_add_backing_mem \
+         "${@V@_BACKING_MEM}" \
+         "${@V@_BACKING_MEM_SIZE}"
+
+      my_um_is_rw=y
+   fi
+
+   my_um_run_layer_hook topmost
+
+   my_um_run_hook pre-mount
+   ## %IS_ROOTFS%
+   if [ "X@IS_ROOTFS@" = "Xy" ]; then
+      union_mount_it "${NEWROOT}"
+      autodie union_mount_move_container_to_newroot rootfs
+
+      ## don't "restore" the mount status of the (now moved) newroot mount
+      ##  (could check %my_um_is_rw == y)
+      autodie newroot_no_remount_ro
+
+   else
+      union_mount_it
+   fi
+   my_um_run_hook post-mount
+
+fi # my_um_need_union
+
+add_env HAVE_@V@ y
+add_env HAVE_@V@_RW "${my_um_is_rw}"

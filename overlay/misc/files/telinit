@@ -1,0 +1,55 @@
+#!/bin/busybox sh
+__main__() {
+BB=/bin/busybox
+
+for prog in dropbear; do
+   $BB killall "$prog" || true
+done
+
+if $BB grep -E '(cifs|nfs)' /proc/self/mounts; then
+   # problematic if part of an union mount (aufs and such) - skip ifdown
+   true
+
+elif test -e /run/initramfs/config/have-net; then
+   $BB ifdown -a
+fi
+
+for prog in klogd syslogd; do
+   $BB killall "$prog" || true
+done
+
+$BB sync || true
+
+$BB swapoff -a || true
+
+$BB umount -n -a -r || true
+
+
+case "$1" in
+   _|-)
+      exit 0
+   ;;
+   0)
+      exec $BB poweroff -f
+   ;;
+   6)
+      exec $BB reboot -f
+   ;;
+   *)
+      echo "telinit: unexpected arg: '${1}'"
+   ;;
+esac
+
+exit 9
+}
+
+if [ -n "${SSH_CONNECTION-}" ]; then
+   (
+      exec 1>/dev/console 2>/dev/console
+
+      __main__ "${@}"
+   ) &
+else
+   __main__ "${@}"
+fi
+

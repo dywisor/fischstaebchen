@@ -1,0 +1,45 @@
+#!/bin/sh
+DROPBEAR_PIDFILE=/run/dropbear.pid
+: ${SSHD_PORT:=22}
+
+dropbear_keygen() {
+   [ -f "${2:?}" ] || dropbearkey -t "${1:?}" -f "${2:?}" 1>/dev/null
+}
+
+ssd_dropbear() {
+   local SK="${1:?}"; shift
+   start-stop-daemon -${SK#-} \
+      -x /usr/sbin/dropbear -p ${DROPBEAR_PIDFILE:?} -- "$@"
+}
+
+dropbear_prepare_fs() {
+   mkdir -p -- /etc/dropbear /var/log /run || return
+
+   mkdir -p -- /root/.ssh && chmod 0700 /root/.ssh  || return
+   if [ ! -e /root/.ssh/authorized_keys ]; then
+      rm -f -- /root/.ssh/authorized_keys
+      touch /root/.ssh/authorized_keys || return
+   fi
+   chmod 0600 /root/.ssh/authorized_keys || return
+
+}
+
+case "${1-}" in
+   ''|'start')
+      printf '%s\n' "Starting sshd"
+
+      dropbear_prepare_fs || exit 3
+
+      dropbear_keygen rsa /etc/dropbear/dropbear_rsa_host_key || exit 4
+      dropbear_keygen dss /etc/dropbear/dropbear_dss_host_key || exit 4
+
+      ssd_dropbear -S -j -k -p ${SSHD_PORT} -K 20 || exit 10
+   ;;
+   'stop')
+      ssd_dropbear -K || exit 10
+   ;;
+   *)
+      printf '%s\n' "Bad usage." 1>&2
+      exit 64
+   ;;
+esac

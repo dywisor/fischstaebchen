@@ -1,0 +1,156 @@
+#!/bin/sh
+#  Usage: gentoo-get-stage3-uri [-x|-s] [<arch>:]<variant> [<http_mirror> [<proxy>]]
+#
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+
+set -fu
+
+DEFAULT_HTTP_MIRROR=distfiles.gentoo.org
+
+output_format=simple
+case "${1-}" in
+   '--export'|'-x') output_format='export'; shift || exit ;;
+   '--simple'|'-s') output_format='simple'; shift || exit ;;
+esac
+
+target_arch=
+case "${1-}" in
+   *:*)
+      target_arch="${1%%:*}"
+      variant="${1#*:}"
+   ;;
+
+   *)
+      variant="${1-}"
+   ;;
+esac
+[ -n "${variant}" ] || exit 64
+
+case "${variant}" in
+   x86_64|x86_64-*)
+      : ${target_arch:=amd64}
+      variant="amd64${variant#x86_64}"
+   ;;
+
+   x86|x86-*)
+      : ${target_arch:=x86}
+      variant="i686${variant#x86}"
+   ;;
+
+   i?86|i?86-*)
+      : ${target_arch:=x86}
+   ;;
+
+   arm|mips)
+      printf '%s: %s\n' "Invalid variant: ${variant}" 1>&2
+      exit 64
+   ;;
+
+   *)
+      [ -n "${target_arch}" ] || target_arch="${variant%%-*}"
+   ;;
+esac
+
+case "${target_arch}" in
+   x86_64) target_arch=amd64 ;;
+   i?86)   target_arch=x86   ;;
+esac
+
+variant_maybe_with_vanilla_suffix=
+case "${variant}" in
+   *-*-*)
+      :
+   ;;
+   *-uclibc)
+      variant_maybe_with_vanilla_suffix=y
+   ;;
+esac
+
+
+case "${2-}" in
+   ''|'-')
+      http_mirror="${DEFAULT_HTTP_MIRROR}"
+   ;;
+   http://*)
+      http_mirror="${2#http://}"
+   ;;
+   *)
+      http_mirror="${2}"
+   ;;
+esac
+
+proxy="${3-}"
+case "${proxy}" in
+   '-'|'/') proxy= ;;
+   *) proxy="${proxy%/}/" ;;
+esac
+
+
+dist_uri_rel="/releases/${target_arch}/autobuilds"
+
+dist_uri_noproxy="http://${http_mirror}${dist_uri_rel}"
+dist_uri_proxy="http://${proxy}${http_mirror}${dist_uri_rel}"
+
+vassign()  { printf "%s=%s%s%s\n" "${1:?}" "\"" "${2?}" "\""; }
+
+if [ -n "${VPREFIX-}" ]; then
+avassign() { vassign "${VPREFIX:?}${1:?}" "${2?}"; }
+else
+avassign() { vassign "gentoo_bootstrap_${1:?}" "${2?}"; }
+fi
+
+__print_result_do_exit() {
+   uri="${dist_uri_proxy}/${relpath}"
+
+   case "${output_format}" in
+      'simple')
+         printf '%s\n' "${uri}"
+         exit 0
+      ;;
+
+      'export')
+         avassign path "${relpath}"
+         avassign name "${fname}"
+         avassign md5  ""
+         avassign uri  "${uri}"
+         exit 0
+      ;;
+
+      *)
+         exit 71
+      ;;
+   esac
+}
+
+wget -q -O - "${dist_uri_noproxy}/latest-stage3.txt" | \
+{
+   # in-subshell:
+   while read -r relpath fsize BOGUS; do
+      if [ -z "${relpath}" ] || [ "${relpath#\#}" != "${relpath}" ]; then
+         true
+
+      elif [ -n "${BOGUS-}" ]; then
+         printf '%s\n' "Unexpected input format." 1>&2
+         exit 9
+
+      else
+         fname="${relpath##*/}"
+
+         case "${fname}" in
+            stage3-${variant}-????????.t*)
+               __print_result_do_exit
+            ;;
+            stage3-${variant}-vanilla-????????.t*)
+               [ -z "${variant_maybe_with_vanilla_suffix}" ] || \
+               __print_result_do_exit
+            ;;
+         esac
+      fi
+   done
+
+   exit 3
+}

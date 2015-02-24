@@ -1,0 +1,25 @@
+##AUR spice-vdagent
+
+ffmpeg
+mplayer
+x264
+x265
+
+mousepad
+ristretto
+file-roller
+xournal
+zathura
+zathura-pdf-mupdf
+
+firefox
+
+meld
+geany
+
+gst-libav
+gst-plugins-bad
+gst-plugins-base
+gst-plugins-good
+gst-plugins-ugly
+#@gstreamer0.10-plugins

@@ -1,0 +1,15 @@
+* overlay:
+
+   * create overlay/src/<name>
+
+   * maybe add <name> to DEFAULT_OVERLAYS in overlay/Makefile
+
+* buildroot:
+
+   * add BR2_PACKAGE_FISCHSTAEBCHEN_OVERLAY_<NAME> to buildroot/package/fischstaebchen/Config.in
+
+   * add <NAME> to buildroot/package/fischstaebchen/fischstaebchen.mk (in FISCHSTAEBCHEN_DO_GEN_OVERLAYS_LIST)
+
+* standalone:
+
+   * maybe add <name> to INITRAMFS_OVERLAYS in standalone/overlay.mk

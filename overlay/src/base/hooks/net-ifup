@@ -1,0 +1,15 @@
+#!@@XSHELL@@
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+if @@INOFLAG@@/want-net; then
+   exit 0
+fi
+
+if [ "${VERBOSE:-n}" = "y" ]; then
+   exec @@BB_APPLET@@ ifup -a
+else
+   exec @@BB_APPLET@@ ifup -a @@NO_STDOUT@@
+fi

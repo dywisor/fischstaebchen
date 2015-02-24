@@ -1,0 +1,11 @@
+@base
+@@base-devel
+
+busybox
+sudo
+screen
+tmux
+wgetpaste
+pwgen
+htop
+lsof

@@ -1,0 +1,16 @@
+jfsutils
+licenses
+linux
+logrotate
+pcmciautils
+reiserfsprogs
+s-nail
+xfsprogs
+
+cryptsetup
+device-mapper
+lvm2
+mdadm
+
+dhcpcd
+netctl

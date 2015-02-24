@@ -1,0 +1,9 @@
+ethtool
+smartmontools
+lsb-release
+
+pciutils
+usbutils
+
+tlp
+x86_energy_perf_policy

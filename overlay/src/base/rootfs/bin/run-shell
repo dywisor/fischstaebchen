@@ -1,0 +1,5 @@
+#!/bin/busybox sh
+exec setsid cttyhack sh
+
+printf "%s\n" "failed to launch shell with setsid/cttyhack!"
+exec /bin/busybox sh
