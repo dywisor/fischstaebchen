@@ -56,8 +56,8 @@ _WARNFLAGS  =
 
 ifeq ($(NO_WERROR),)
 _WARNFLAGS += -Werror
-_WARNFLAGS += -Wno-unused-parameter
-_WARNFLAGS += -Wno-unknown-pragmas
+_WARNFLAGS += -Wno-unused-parameter -Wno-error=unused-parameter
+_WARNFLAGS += -Wno-unknown-pragmas  -Wno-error=unknown-pragmas
 endif
 
 _WARNFLAGS += -Wall -Wextra
