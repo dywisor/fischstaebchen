@@ -20,7 +20,6 @@ $(OVERLAY_O_TMPROOT)/include_order: \
 	done > $(@).new
 
 	set -e; \
-	{ set -o pipefail || true; }; \
 	{ \
 		{ \
 			find '$(OVERLAY_O_FUNCTIONS_DIR)/src/' \
