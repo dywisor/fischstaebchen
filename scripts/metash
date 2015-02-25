@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 #  very hacky script for converting "meta" shell scripts into regular ones
@@ -10,6 +10,7 @@ from __future__ import print_function, nested_scopes, with_statement
 
 import argparse
 import collections
+import codecs
 import os
 import sys
 import re
@@ -17,7 +18,19 @@ import math
 import shlex
 import string
 
-_string_types = ( str, )
+if sys.hexversion >= 0x3000000:
+   py2k = False
+   _string_types = ( str, )
+   _unicode      = str
+   _utf8_open    = lambda f, m: open(f,m + 't')
+else:
+   import UserDict
+
+   py2k = True
+   _string_types = ( basestring, )
+   _unicode      = unicode
+   _utf8_open    = lambda f, m: codecs.open(f, m, 'utf8')
+
 
 def get_dec_int_digit_len ( n ):
    if not n:
@@ -47,40 +60,76 @@ class BadInstructionError ( InstructionError ):
    pass
 
 
-class VarsDict ( collections.UserDict ):
-   def __init__ ( self, data=None, parent_vars=None ):
-      super ( VarsDict, self ).__init__ ( data or {} )
-      self.parent_vars = parent_vars
+if not py2k:
+   class VarsDict ( collections.UserDict ):
+      def __init__ ( self, data=None, parent_vars=None ):
+         super ( VarsDict, self ).__init__ ( data or {} )
+         self.parent_vars = parent_vars
 
-   def has_own ( self, key ):
-      return key in self.data
+      def has_own ( self, key ):
+         return key in self.data
 
-   def __getitem__ ( self, key ):
-      try:
-         return super ( VarsDict, self ).__getitem__ ( key )
-      except KeyError:
-         if self.parent_vars is not None:
-            try:
-               return self.parent_vars [key]
-            except KeyError:
-               pass
-         raise
+      def __getitem__ ( self, key ):
+         try:
+            return super ( VarsDict, self ).__getitem__ ( key )
+         except KeyError:
+            if self.parent_vars is not None:
+               try:
+                  return self.parent_vars [key]
+               except KeyError:
+                  pass
+            raise
 
-   def weakdef ( self, key, value ):
-      if key not in self:
-         self [key] = value
+      def weakdef ( self, key, value ):
+         if key not in self:
+            self [key] = value
 
-   def weakdef_own ( self, key, value ):
-      if key not in self.data:
-         self [key] = value
+      def weakdef_own ( self, key, value ):
+         if key not in self.data:
+            self [key] = value
 
-   def get_dereference ( self, key ):
-      ref = self.__getitem__ ( key )
-      return ref ( self ) if hasattr ( ref, '__call__' ) else ref
+      def get_dereference ( self, key ):
+         ref = self.__getitem__ ( key )
+         return ref ( self ) if hasattr ( ref, '__call__' ) else ref
 
-   def fork ( self ):
-      return self.__class__ ( data=self.data, parent_vars=self )
+      def fork ( self ):
+         return self.__class__ ( data=self.data, parent_vars=self )
 
+else:
+   class VarsDict ( UserDict.UserDict ):
+      def __init__ ( self, data=None, parent_vars=None ):
+         UserDict.UserDict.__init__ ( self, data or {} )
+         self.parent_vars = parent_vars
+
+      def has_own ( self, key ):
+         return key in self.data
+
+      def __getitem__ ( self, key ):
+         try:
+            return UserDict.UserDict.__getitem__ ( self, key )
+         except KeyError:
+            if self.parent_vars is not None:
+               try:
+                  return self.parent_vars [key]
+               except KeyError:
+                  pass
+            raise
+
+      def weakdef ( self, key, value ):
+         if key not in self:
+            self [key] = value
+
+      def weakdef_own ( self, key, value ):
+         if key not in self.data:
+            self [key] = value
+
+      def get_dereference ( self, key ):
+         ref = self.__getitem__ ( key )
+         return ref ( self ) if hasattr ( ref, '__call__' ) else ref
+
+      def fork ( self ):
+         return self.__class__ ( data=self.data, parent_vars=self )
+# --
 
 
 class SymbolReference ( object ):
@@ -108,7 +157,7 @@ class SymbolReference ( object ):
          return val
 
    def get_str_value ( self ):
-      return str ( self.get_value() )
+      return _unicode ( self.get_value() )
 
    __str__ = get_str_value
 
@@ -142,7 +191,7 @@ class MetavarTextLine ( object ):
       self.add_metavar_ref ( MetavarReference ( *args, **kwargs ) )
 
    def gen_str ( self ):
-      return map ( str, self.line_components )
+      return map ( _unicode, self.line_components )
 
    def __str__ ( self ):
       return ''.join ( self.gen_str() )
@@ -290,7 +339,7 @@ class FileReader ( object ):
       elif not isinstance ( filepath, _string_types ):
          for line in filepath: yield line
       else:
-         with open ( filepath, 'rt' ) as fh:
+         with _utf8_open ( filepath, 'r' ) as fh:
             for line in fh: yield line
 
    def xform_file_line ( self, line ):
@@ -701,7 +750,7 @@ class MetavarFileReader ( FileReader ):
             # -- <missing?>
          # -- <is metavar line?>
 
-         yield ( lino, input_line, xform_line ( str ( line_obj ) ) )
+         yield ( lino, input_line, xform_line ( _unicode ( line_obj ) ) )
 
    def preprocess_file ( self, filepath, **kwargs ):
       return self.preprocess_lines (
@@ -746,7 +795,7 @@ class ShellVar ( object ):
 
    def get_value_str ( self ):
       value              = self.value
-      unquoted_value_str = str(value)
+      unquoted_value_str = _unicode(value)
 
       if isinstance ( value, int ) or value in {
          'y', 'n', 'true', 'false', ''
@@ -773,13 +822,13 @@ class ShellVar ( object ):
                '{I}[ -n "${{{0}+SET}}" ] || readonly {0}={1}'
             ).format ( varname, value_str[1], I=indent )
          else:
-            return "{I}readonly {}={}".format ( varname, value_str[1], I=indent )
+            return "{I}readonly {0}={1}".format ( varname, value_str[1], I=indent )
 
       elif self.weak:
          # FIXME: weak var uses ":=", weak const uses "="
          return '{I}: ${{{0}:={1}}}'.format ( varname, value_str[0], I=indent )
       else:
-         return "{I}{}={}".format ( varname, value_str[1], I=indent )
+         return "{I}{0}={1}".format ( varname, value_str[1], I=indent )
    # --- end of get_var_def_str (...) ---
 
 
@@ -1117,7 +1166,7 @@ class ShellMacros ( object ):
          except ValueError:
             varnames = argv
          else:
-            varnames = [ 'v{:d}'.format(k) for k in range(num_retvars) ]
+            varnames = [ 'v{0:d}'.format(k) for k in range(num_retvars) ]
 
       else:
          varnames = argv
@@ -1183,14 +1232,14 @@ class ShellMacros ( object ):
          elif nshifts:
             var_init_code.append (
                self.STR_VFORMAT (
-                  'shift {} || return ${{EX_SHIFT_ERR:-249}}',
+                  'shift {0} || return ${{EX_SHIFT_ERR:-249}}',
                   ( nshifts, ), {}
                )
             )
       # -- end for
 
       for varname in sorted(varnames):
-         yield self.STR_VFORMAT ( '{I}local  {}', ( varname, ), fmt_vars )
+         yield self.STR_VFORMAT ( '{I}local  {0}', ( varname, ), fmt_vars )
 
       if varnames and var_init_code:
          yield ''
@@ -1211,7 +1260,7 @@ class ShellMacros ( object ):
          except ValueError:
             pass
          else:
-            vardef = 'i' + str(k)  # and str(k) ~~~ vardef..
+            vardef = 'i' + _unicode(k)  # and str(k) ~~~ vardef..
 
       dstvar, sepa, srcvar = vardef.partition('=')
       if not dstvar: raise ValueError()
@@ -2002,7 +2051,7 @@ class MetavarShellFileReader ( MetavarFileReader ):
             )
          else:
             yield _vformat (
-               '{I}## {mod_str}{ret_type} {name} ( {} )',
+               '{I}## {mod_str}{ret_type} {name} ( {0} )',
                ( args_str, ), funcdef_vars
             )
 
@@ -2203,13 +2252,13 @@ def add_default_metavars_shell ( metavars_dict, config ):
    weakdef ( 'SHIFT_OR_RET',
       (
          r'shift || return '
-         + str(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
+         + _unicode(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
       )
    )
    weakdef ( 'SHIFT_OR_DIE',
       (
          r'shift || die "shift returned non-zero." '
-         + str(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
+         + _unicode(SHELL_DEFSYM_SYSEXITS['EX_SHIFT_ERR'].value)
       )
    )
 
@@ -2277,7 +2326,7 @@ def process_infiles ( outfile, reader, metavars_dict, infiles, **kwargs ):
    if outfile == '-':
       outstream = sys.stdout
    else:
-      outstream       = open ( outfile, 'wt' )
+      outstream       = _utf8_open ( outfile, 'w' )
       close_outstream = True
 
    try:
