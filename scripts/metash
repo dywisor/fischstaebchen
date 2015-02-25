@@ -1181,8 +1181,10 @@ class ShellMacros ( object ):
       self, builtin_name, args_str, args_tuple, argv, fmt_vars
    ):
       re_vardef = re.compile (
-         '(?P<name>[A-Za-z_0-9]+)'
-         '(?P<shiftop>[<]{1,})?(?:(?P<assignop>[=])(?P<value>.*)?)?'
+         (
+            r'(?P<name>[A-Za-z_0-9]+)'
+            r'(?P<shiftop>[<]{1,})?(?:(?P<assignop>[=])(?P<value>.+)?)?'
+         )
       )
 
       varnames      = set()
@@ -1768,7 +1770,7 @@ class ShellMacros ( object ):
       self, builtin_name, args_str, args_tuple, argv, fmt_vars
    ):
       _vformat = self.STR_VFORMAT
-      ere      = re.compile ( '[:?=]' )
+      ere      = re.compile ( r'[:?=]' )
       varnames = argv or [ 'v0:?' ]
 
       for varname in varnames:
@@ -1802,13 +1804,13 @@ class MetavarShellFileReader ( MetavarFileReader ):
    STR_VFORMAT   = STR_FORMATTER.vformat
 
    re_instruction = re.compile (
-      '^(?P<indent>\s+)?'
-      '(?P<prefix>[<][%]\s*)'
-      '(?P<instruction>'
-         '(?P<keyword>(?:[%]\s*)?\S+)(?:\s+(?P<args>.*\S))?'
-      ')'
-      '(?P<suffix>\s*[%][>])'
-      '(?P<remainder>\s*.*)?$'
+      r'^(?P<indent>\s+)?'
+      r'(?P<prefix>[<][%]\s*)'
+      r'(?P<instruction>'
+         r'(?P<keyword>(?:[%]\s*)?\S+)(?:\s+(?P<args>.*\S))?'
+      r')'
+      r'(?P<suffix>\s*[%][>])'
+      r'(?P<remainder>.+)?$'
    )
 
    re_instruction_keyword_fixup = re.compile ( r'([-]|\s)' )
@@ -2348,9 +2350,9 @@ def read_vdef_files ( mvars, vdef_files ):
    #
    re_line = re.compile (
       (
-         '^(?P<name>(:?[a-z_][a-z_0-9]*|[A-Z_][A-Z_0-9]*))\s*(?P<op>:?=)'
-         '(?P<raw_val>\s*(?P<val>.*?)\s*)'
-         '(?:[|])?$'
+         r'^(?P<name>(:?[a-z_][a-z_0-9]*|[A-Z_][A-Z_0-9]*))\s*(?P<op>:?=)'
+         r'(?P<raw_val>\s*(?P<val>.*?)\s*)'
+         r'(?:[|])?$'
       )
    )
 
