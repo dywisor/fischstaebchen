@@ -27,14 +27,13 @@ PHONY += busybox
 busybox: $(BUSYBOX_O)/busybox
 
 
-PHONY += $(BUSYBOX_SRC)
-$(BUSYBOX_SRC):
+$(BUSYBOX_SRC): FORCE
 	mkdir -p -- $(@D)
 	test -d $(@) || $(X_GIT) clone $(BUSYBOX_GIT_SRC) $(BUSYBOX_SRC)
 	$(X_GIT) -C $(BUSYBOX_SRC) pull
 
 
-$(BUSYBOX_O)/.config: $(FILESDIR)/busybox.config $(BUSYBOX_SRC)
+$(BUSYBOX_O)/.config: $(FILESDIR)/busybox.config $(BUSYBOX_SRC) FORCE
 	mkdir -p $(@D)
 	$(MAKE) -s $(BUSYBOX_MAKEOPTS) defconfig 1>/dev/null
 
@@ -55,5 +54,5 @@ endif
 	yes '' | $(MAKE) -s $(BUSYBOX_MAKEOPTS) oldconfig 1>/dev/null
 
 
-$(BUSYBOX_O)/busybox: $(BUSYBOX_SRC) $(BUSYBOX_O)/.config
+$(BUSYBOX_O)/busybox: $(BUSYBOX_SRC) $(BUSYBOX_O)/.config | $(BUSYBOX_SRC)
 	$(MAKE) $(BUSYBOX_MAKEOPTS)
