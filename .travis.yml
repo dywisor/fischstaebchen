@@ -6,10 +6,6 @@ compiler:
    - gcc
    - clang
 
-cache:
-   directories:
-      - standalone/src/busybox
-
 env:
    matrix:
       - S=static-init
