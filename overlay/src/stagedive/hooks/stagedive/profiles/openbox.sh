@@ -6,7 +6,16 @@
 
 stagedive_inherit  _live
 
-if check_fspath_configured "${RREL_ETC_CONFD}"; then
+# some distros use conf.d for different purposes,
+#  check for [/usr]/lib/rc as well
+# FIXME: make this configurable (%ROOT_HAS_OPENRC in <profile>.sh)
+if \
+   check_fspath_configured "${RREL_ETC_CONFD}" && \
+   {
+      test_fs_lexists "${ROOT%/}/lib/rc" || \
+      test_fs_lexists "${ROOT%/}/usr/lib/rc"
+   }
+then
 stagedive_inherit  _openrc_live
 fi
 
