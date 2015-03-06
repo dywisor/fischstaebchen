@@ -58,9 +58,9 @@ static inline int _check_command_allowed (
                   return is_whitespace_or_empty(p_args[8]) ? 0 : -1;
                }
             }
-         } else {
+
             /* "mkdir" */
-            if ( strncmp ( cmd_str, "mkdir", 5 ) == 0 ) {
+            else if ( strncmp ( cmd_str, "mkdir", 5 ) == 0 ) {
                return 0;
             }
          }
