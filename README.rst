@@ -156,12 +156,12 @@ have to use ``BR2_EXTERNAL``.
 Download
 ========
 
-Clone or update the git repository:
+Clone or update the *fischstaebchen-buildroot* git repository:
 
 .. code::
 
    mkdir -p -- ~/git-src
-   git clone git://github.com/dywisor/fischstaebchen.git ~/git-src/fischstaebchen
+   git clone git://github.com/dywisor/fischstaebchen-buildroot.git ~/git-src/fischstaebchen-buildroot
 
 
 Likewise, for buildroot:
@@ -181,7 +181,7 @@ Create a configuration file:
 
       cd ~/git-src/buildroot
 
-      make BR2_EXTERNAL=~/git-src/fischstaebchen/buildroot fischstaebchen_x86_64_defconfig
+      make BR2_EXTERNAL=~/git-src/fischstaebchen-buildroot fischstaebchen_x86_64_defconfig
 
       make nconfig
 
