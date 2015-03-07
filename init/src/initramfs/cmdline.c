@@ -145,35 +145,42 @@ static int _initramfs_cmdline_process_arg__shell (
 
 ) {
    if ( arg->end_of_arg < 0 ) {
-      if ( arg->nargs < 2 ) {
-         g->doshell = INITRAMFS_DOSHELL_LOOP;
-      }
+      /* (maybe empty) comma-separated arg list follows (when end_of_arg == 0) */
+      g->doshell = INITRAMFS_DOSHELL_ONERROR;
 
+      if ( arg->nargs < 2 ) {
+         g->doshell |= INITRAMFS_DOSHELL_LOOP;
+      }
+/*
+   } else if ( arg->end_of_arg > 0 ) {
+      g->doshell &= (INITRAMFS_DOSHELL__MAX - 1);
+*/
    } else if ( arg->end_of_arg == 0 ) {
       if ( STR_IS_NOT_EMPTY ( arg->value ) ) {
          STREQ_SWITCH ( arg->value,
             "never", "fail", "error", "once", "pre", "preswitch", "always"
           ) {
             case 0:  /* never */
+               /* resets any previous mask */
                g->doshell = INITRAMFS_DOSHELL_DISABLE;
                break;
 
             case 1:  /* fail */
             case 2:  /* error */
-               g->doshell = INITRAMFS_DOSHELL_ONERROR;
+               g->doshell |= INITRAMFS_DOSHELL_ONERROR;
                break;
 
             case 3:  /* once */
-               g->doshell = INITRAMFS_DOSHELL_ONCE;
+               g->doshell |= INITRAMFS_DOSHELL_ONCE;
                break;
 
             case 4:  /* pre */
             case 5:  /* preswitch */
-               g->doshell = INITRAMFS_DOSHELL_ONCE_PRESWITCH;
+               g->doshell |= INITRAMFS_DOSHELL_ONCE_PRESWITCH;
                break;
 
             case 6:  /* always */
-               g->doshell = INITRAMFS_DOSHELL_LOOP;
+               g->doshell |= INITRAMFS_DOSHELL_LOOP;
                break;
 
             default:

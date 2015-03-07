@@ -22,11 +22,13 @@
 
 
 enum {
-   INITRAMFS_DOSHELL_DISABLE,
-   INITRAMFS_DOSHELL_ONERROR,
-   INITRAMFS_DOSHELL_ONCE,
-   INITRAMFS_DOSHELL_ONCE_PRESWITCH,
-   INITRAMFS_DOSHELL_LOOP
+   INITRAMFS_DOSHELL_DISABLE         = 0x00,
+   INITRAMFS_DOSHELL_ONERROR         = 0x01,
+   INITRAMFS_DOSHELL_ONCE            = 0x02,
+   INITRAMFS_DOSHELL_ONCE_PRESWITCH  = 0x04,
+   INITRAMFS_DOSHELL_LOOP            = 0x08,
+
+   INITRAMFS_DOSHELL__MAX            = 0x10
 };
 
 enum {
@@ -42,7 +44,7 @@ struct initramfs_globals_type {
    short                   want_newroot_mount;
    short                   want_newroot_usr_mount;
    unsigned                rootfind_delay;
-   int                     doshell;
+   unsigned                doshell;
    unsigned                premount_status;
    int                     have_network;
 

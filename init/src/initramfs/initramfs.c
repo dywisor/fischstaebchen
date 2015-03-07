@@ -155,36 +155,29 @@ int initramfs_run_shell (
 int initramfs_run_onerror_shell (
    const int retcode_in, const char* const reason
 ) {
-   switch ( initramfs_globals->doshell ) {
-      case INITRAMFS_DOSHELL_ONERROR:
-      case INITRAMFS_DOSHELL_ONCE:
-      case INITRAMFS_DOSHELL_ONCE_PRESWITCH:
-      case INITRAMFS_DOSHELL_LOOP:
-         return initramfs_run_shell ( retcode_in, reason, 0 );
-
-      default:
-         return -1;
+   if ( (initramfs_globals->doshell & INITRAMFS_DOSHELL_ONERROR) != 0 ) {
+      return initramfs_run_shell ( retcode_in, reason, 0 );
    }
+
+   return -1;
 }
 
 int initramfs_run_user_preswitch_shell_if_requested (void) {
-   switch ( initramfs_globals->doshell ) {
-      case INITRAMFS_DOSHELL_ONCE_PRESWITCH:
-         return initramfs_run_shell ( 0, "preswitch shell", 0 );
+   if ( (initramfs_globals->doshell & INITRAMFS_DOSHELL_ONCE_PRESWITCH) != 0 ) {
+      return initramfs_run_shell ( 0, "preswitch shell", 0 );
    }
 
    return 0;
 }
 
 int initramfs_run_user_shell_if_requested (void) {
-   switch ( initramfs_globals->doshell ) {
-      case INITRAMFS_DOSHELL_ONCE:
-         return initramfs_run_shell ( 0, NULL, 0 );
+   if ( (initramfs_globals->doshell & INITRAMFS_DOSHELL_LOOP) != 0 ) {
+      /* fork bomb */
+      while ( initramfs_run_shell ( 0, NULL, 0 ) >= 0 ) { ; }
+      exit(EXIT_FAILURE);
 
-      case INITRAMFS_DOSHELL_LOOP:
-         /* fork bomb */
-         while ( initramfs_run_shell ( 0, NULL, 0 ) >= 0 ) { ; }
-         exit(EXIT_FAILURE);
+   } else if ( (initramfs_globals->doshell & INITRAMFS_DOSHELL_ONCE) != 0 ) {
+      return initramfs_run_shell ( 0, NULL, 0 );
    }
 
    return 0;

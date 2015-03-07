@@ -783,7 +783,7 @@ zram_disk=<name>|name=<name>,[size=<size>]
 zdisk=...
    Alias to ``zram_disk``.
 
-xshell[=never|fail|error|once|pre|preswitch|always]
+xshell[=<when>[,<when>...]]
    Specifies when (and if) */init* should run a shell:
 
    never
