@@ -282,7 +282,7 @@ void initramfs_additional_env_exports (void) {
 
    export_env_shbool (
       "SHELL_ON_ERROR",
-      (initramfs_globals->doshell & INITRAMFS_DOSHELL_ONERROR)
+      ( (initramfs_globals->doshell & INITRAMFS_DOSHELL_ONERROR) != 0 )
    );
 }
 
