@@ -43,7 +43,11 @@ ARCHSTRAP_TARGET_MEM_SIZE=1000m
 ARCHSTRAP_TARGET_INSTALL_PHASES="base core extra"
 
 ## --noconfirm, --needed get always added
+if __verbose__; then
+ARCHSTRAP_TARGET_PACINS_QUIET=n
+else
 ARCHSTRAP_TARGET_PACINS_QUIET=y
+fi
 ARCHSTRAP_TARGET_PACINS_OPTS=
 
 ## ARCHSTRAP_PKG_FILTER applies to both pacstrap/pacinstall
