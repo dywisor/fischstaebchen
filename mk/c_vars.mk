@@ -1,9 +1,3 @@
-_OPTIFLAGS  = -O2
-ifneq ($(NO_OPTIMIZE),1)
-#_OPTIFLAGS += -funsafe-loop-optimizations
-#_OPTIFLAGS += -funroll-loops -funswitch-loops
-endif
-
 CC           = gcc
 TARGET_CC    = $(CROSS_COMPILE)$(CC)
 LD           = ld
@@ -38,6 +32,7 @@ endif
 USE_LTO      ?= 1
 USE_GRAPHITE ?= 0
 
+_OPTIFLAGS  = -O2
 ifeq ($(USE_LTO),1)
 _OPTIFLAGS += -flto
 ifeq ($(_IS_GCC),1)
@@ -45,11 +40,12 @@ _OPTIFLAGS += -fuse-linker-plugin
 endif
 endif
 
-
 ifeq ($(USE_GRAPHITE),1)
 _OPTIFLAGS += \
 	-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block
 endif
+
+_OPTIFLAGS += $(OPTIMIZE)
 
 # default -W... flags for CFLAGS
 _WARNFLAGS  =
