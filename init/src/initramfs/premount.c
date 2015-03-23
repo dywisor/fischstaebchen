@@ -41,14 +41,24 @@ static int _initramfs_newroot_premount ( const char* const fstab_file ) {
    return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
 }
 
+
+#define _IGET_FSTAB_ANYOF(a,b) \
+   my_fstab_file = ( \
+      (access ( a, F_OK ) == 0) ? a : \
+         ( (access ( b, F_OK ) == 0) ? b : NULL ) \
+   )
+
 #define IGET_FSTABFILE(f)  \
+   _IGET_FSTAB_ANYOF ( \
+      GET_NEWROOT_PATH ( f ".premount" ), GET_NEWROOT_PATH ( f ) \
+   )
+
+#define IMOUNT_FSTABFILE(f)  \
    do { \
-      my_fstab_file = NULL; \
-      \
-      if ( access ( GET_NEWROOT_PATH(f ".premount"), F_OK ) == 0 ) { \
-         my_fstab_file = (f ".premount"); \
-      } else if ( access ( GET_NEWROOT_PATH(f), F_OK ) == 0 ) { \
-         my_fstab_file = f; \
+      IGET_FSTABFILE ( f ); \
+      if ( my_fstab_file != NULL ) { \
+         ret = _initramfs_newroot_premount ( my_fstab_file ); \
+         if ( ret != 0 ) { return ret; } \
       } \
    } while (0)
 
@@ -58,21 +68,13 @@ int initramfs_newroot_premount ( const char* const fstab_file ) {
       int ret;
       const char* my_fstab_file;
 
-      ret = 1;
+      ret = 127;
 
       /* read <newroot>/fstab.premount or <newroot>/fstab */
-      IGET_FSTABFILE ( "/fstab" );
-      if ( my_fstab_file != NULL ) {
-         ret = _initramfs_newroot_premount ( my_fstab_file );
-         if ( ret != 0 ) { return ret; }
-      }
+      IMOUNT_FSTABFILE ( "/fstab" );
 
       /* read <newroot>/etc/fstab.premount or <newroot>/etc/fstab */
-      IGET_FSTABFILE ( "/etc/fstab" );
-      if ( my_fstab_file != NULL ) {
-         ret = _initramfs_newroot_premount ( my_fstab_file );
-         if ( ret != 0 ) { return ret; }
-      }
+      IMOUNT_FSTABFILE ( "/etc/fstab" );
 
       /* ret != 0: no file found */
       if ( ret != 0 ) {
@@ -85,7 +87,9 @@ int initramfs_newroot_premount ( const char* const fstab_file ) {
    }
 }
 
+#undef IMOUNT_FSTABFILE
 #undef IGET_FSTABFILE
+#undef _IGET_FSTAB_ANYOF
 
 static int _mount_that_entry (
    const char* const root,
@@ -134,13 +138,22 @@ int initramfs_premount_all_nofilter (
 #define I_WANT_THAT_ENTRY()  \
    _initramfs_premount_all__mount(root,mp,entry,&retcode)
 
+
+   int esav;
    int retcode;
    FILE* fstream;
    const struct mntent* entry;
    const char* mp;
 
    fstream = setmntent ( fstab_file, "r" );
-   if ( fstream == NULL ) { return 1; }
+   if ( fstream == NULL ) {
+      esav = errno;
+      initramfs_warn (
+         "Failed to open fstab file %s: %s", "\n", fstab_file, strerror(esav)
+      );
+      errno = esav;
+      return 1;
+   }
 
    retcode = 0;
 
@@ -167,13 +180,21 @@ int initramfs_premount_all (
    _initramfs_premount_all__mount(root,mp,entry,&retcode)
 
 
+   int esav;
    int retcode;
    FILE* fstream;
    const struct mntent* entry;
    const char* mp;
 
    fstream = setmntent ( fstab_file, "r" );
-   if ( fstream == NULL ) { return 1; }
+   if ( fstream == NULL ) {
+      esav = errno;
+      initramfs_warn (
+         "Failed to open fstab file %s: %s", "\n", fstab_file, strerror(esav)
+      );
+      errno = esav;
+      return 1;
+   }
 
    retcode = 0;
 
