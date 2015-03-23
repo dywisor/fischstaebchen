@@ -15,6 +15,10 @@ parse_default() {
          ishare_set_flag want-net "${value:-y}"
       ;;
 
+      keep-net)
+         ishare_set_flag keep-net "${value:-y}"
+      ;;
+
       rootfstype)
          defparser_rootfstype="${value}"
       ;;
@@ -47,6 +51,9 @@ parse_default_done() {
       nfs|cifs)
          veinfo "Automatically enabling want-net flag due to rootfstype=${defparser_rootfstype}"
          ishare_add_flag want-net
+
+         veinfo "Automatically enabling keep-net flag due to rootfstype=${defparser_rootfstype}"
+         ishare_add_flag keep-net
       ;;
    esac
 
