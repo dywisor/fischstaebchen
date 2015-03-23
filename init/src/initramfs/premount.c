@@ -35,41 +35,57 @@ enum {
    PREMOUNT_CANNOT_MOUNT
 };
 
-static const char* _initramfs_newroot_premount_get_default_file(void) {
-#define IFILE(p) \
+
+static int _initramfs_newroot_premount ( const char* const fstab_file ) {
+   initramfs_info ( "Reading fstab file %s", "\n", fstab_file );
+   return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
+}
+
+#define IGET_FSTABFILE(f)  \
    do { \
-      if ( access ( GET_NEWROOT_PATH(p), F_OK ) == 0 ) { \
-         return GET_NEWROOT_PATH(p); \
+      my_fstab_file = NULL; \
+      \
+      if ( access ( GET_NEWROOT_PATH(f ".premount"), F_OK ) == 0 ) { \
+         my_fstab_file = (f ".premount"); \
+      } else if ( access ( GET_NEWROOT_PATH(f), F_OK ) == 0 ) { \
+         my_fstab_file = f; \
       } \
    } while (0)
 
-   IFILE ( "/fstab.premount" );
-   IFILE ( "/fstab" );
-   IFILE ( "/etc/fstab.premount" );
-   IFILE ( "/etc/fstab" );
-#undef IFILE
-
-   /* nothing found */
-   return NULL;
-}
 
 int initramfs_newroot_premount ( const char* const fstab_file ) {
    if ( fstab_file == NULL ) {
-      const char* const my_fstab_file = \
-         _initramfs_newroot_premount_get_default_file();
+      int ret;
+      const char* my_fstab_file;
 
-      if ( my_fstab_file == NULL ) {
-         initramfs_info ( "%s", "\n", "no fstab file found in newroot!" );
-         return 0;
+      ret = 1;
+
+      /* read <newroot>/fstab.premount or <newroot>/fstab */
+      IGET_FSTABFILE ( "/fstab" );
+      if ( my_fstab_file != NULL ) {
+         ret = _initramfs_newroot_premount ( my_fstab_file );
+         if ( ret != 0 ) { return ret; }
       }
 
-      initramfs_info ( "Reading fstab file %s", "\n", my_fstab_file );
-      return initramfs_premount_all ( NEWROOT_MOUNTPOINT, my_fstab_file );
+      /* read <newroot>/etc/fstab.premount or <newroot>/etc/fstab */
+      IGET_FSTABFILE ( "/etc/fstab" );
+      if ( my_fstab_file != NULL ) {
+         ret = _initramfs_newroot_premount ( my_fstab_file );
+         if ( ret != 0 ) { return ret; }
+      }
+
+      /* ret != 0: no file found */
+      if ( ret != 0 ) {
+         initramfs_info ( "%s", "\n", "no fstab file found in newroot!" );
+      }
+      return 0;
 
    } else {
-      return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
+      return _initramfs_newroot_premount ( fstab_file );
    }
 }
+
+#undef IGET_FSTABFILE
 
 static int _mount_that_entry (
    const char* const root,
