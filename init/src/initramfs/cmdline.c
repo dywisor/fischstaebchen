@@ -634,7 +634,8 @@ static int _initramfs_cmdline_get_int_key ( const char* const key ) {
       "liram",
       "stagedive",
 
-      "nousrmount"
+      "nousrmount",
+      "rootflags"
    ) {
       case -1:
          if ( str_startswith ( key, "liram_" ) != NULL ) {
@@ -669,6 +670,7 @@ static int _initramfs_cmdline_get_int_key ( const char* const key ) {
          return CMDLINE_KEY_NEWROOT_FSTYPE;
 
       case 9:  /* rootfsflags */
+      case 19: /* rootflags */
          return CMDLINE_KEY_NEWROOT_FLAGS;
 
       case 10: /* rootfind */
