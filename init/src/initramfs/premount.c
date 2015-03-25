@@ -349,13 +349,16 @@ static int _mount_ztmpfs_entry (
    }
 }
 
-static int _mount_has_loop_opt (
-   const struct mntent* const entry
+static const char* _mount_get_mount_opt (
+   const struct mntent* const entry,
+   const char* const opt, const size_t opt_len, const int is_bareword
 ) {
+   static const char* const def_val = "1";
+
    const char* substr;
 
-   substr = hasmntopt ( entry, "loop" );
-   if ( substr == NULL ) { return 1; }
+   substr = hasmntopt ( entry, opt );
+   if ( substr == NULL ) { return NULL; }
 
    /* must be preceeded by an "," if not the first option in mnt_opts */
    if ( substr != entry->mnt_opts ) {
@@ -364,18 +367,32 @@ static int _mount_has_loop_opt (
             break;
 
          default:
-            return 1;
+            return NULL;
       }
    }
 
-   /* must end with either '\0' or ',' */
-   switch ( *(substr+4) ) {
+   /* must end with either '\0' or ',' -- or '=' unless bareword */
+   /* FIXME: backslash-escaped ",", "=" */
+   switch ( *(substr+opt_len) ) {
       case '\0':
       case ',':
-         return 0;
-   }
+         return def_val;
 
-   return 1;
+      case '=':
+         return is_bareword ? NULL : (substr+opt_len+1);
+
+      default:
+         return NULL;
+   }
+}
+
+#define _mount_has_mount_opt(...)  \
+   ( ( _mount_get_mount_opt(__VA_ARGS__) == NULL ) ? 1 : 0 )
+
+static int _mount_has_loop_opt (
+   const struct mntent* const entry
+) {
+   return _mount_has_mount_opt ( entry, "loop", 4, 1 );
 }
 
 static int _mount_that_entry (
