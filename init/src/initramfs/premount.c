@@ -278,7 +278,7 @@ static int _init_mount_config_from_opts_str_and_autoset (
       /* could be a loop file */
       if ( str_startswith ( fs, "/dev/" ) == NULL ) {
          /* get absolute filepath;
-          * fs starts with "/", so join_pair() is sufficient
+          * fs starts with "/", so join_str_pair() is sufficient
           */
 
          RETFAIL_IF_NULL (
@@ -386,6 +386,30 @@ static const char* _mount_get_mount_opt (
          return NULL;
    }
 }
+
+static int _create_bind_mount_source_dir_in_newroot (
+   const char* const source
+) {
+   char* dirpath;
+   int   retcode;
+
+   if ( STR_IS_EMPTY ( source ) ) { return 0; }
+   /* TODO: check if source is eligible for auto-creation */
+
+   RETFAIL_IF_NULL (
+      dirpath = join_str_pair ( (NEWROOT_MOUNTPOINT "/"), source )
+   );
+
+   initramfs_debug (
+      "Creating bind-mount source dir in newroot: %s", "\n", source
+   );
+
+   retcode = makedirs ( dirpath );
+
+   x_free ( dirpath );
+   return retcode;
+}
+
 
 static int _mount_that_entry (
    const char* const root,
@@ -511,13 +535,16 @@ static int _mount_that_entry (
       }
    }
 
-/*
    if ( _mount_get_mount_opt ( entry, "bind", 4, 1 ) != NULL ) {
-      // create source directory
-      // TODO: check if source directory is subpath of tmpfs/zram/.. mount
-      //       and create it only in that case
+      /* create source directory */
+      if ( _create_bind_mount_source_dir_in_newroot ( mc.source ) != 0 ) {
+         /* non-fatal, /newroot[<subpath>] could be readonly */
+         initramfs_warn (
+            "Failed to create bind mount source dir %s in newroot!", "\n",
+            mc.source
+         );
+      }
    }
-*/
 
    initramfs_info (
       "Mounting %s on %s (%s)", "\n", mc.source, mc.target, mc.fstype
