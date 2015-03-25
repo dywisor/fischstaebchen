@@ -389,12 +389,6 @@ static const char* _mount_get_mount_opt (
 #define _mount_has_mount_opt(...)  \
    ( ( _mount_get_mount_opt(__VA_ARGS__) == NULL ) ? 1 : 0 )
 
-static int _mount_has_loop_opt (
-   const struct mntent* const entry
-) {
-   return _mount_has_mount_opt ( entry, "loop", 4, 1 );
-}
-
 static int _mount_that_entry (
    const char* const root,
    const char* const mp, const struct mntent* const entry
@@ -500,8 +494,7 @@ static int _mount_that_entry (
       return -1;
    }
 
-
-   if ( _mount_has_loop_opt ( entry ) == 0 ) {
+   if ( _mount_has_mount_opt ( entry, "loop", 4, 1 ) == 0 ) {
       mc.cfg |= MOUNT_CFG_NEED_LOOP;
    }
 
