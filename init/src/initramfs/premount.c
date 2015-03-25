@@ -104,7 +104,10 @@ static int _initramfs_premount_all__mount (
    int mret;
    char* mp;
 
-   mp = join_str_triple ( root, "/", rel_mp );
+   mp = join_str_triple (
+      root, "/",
+      ( ( (rel_mp != NULL) && (*rel_mp == '/') ) ? (rel_mp+1) : rel_mp )
+   );
    if ( mp == NULL ) {
       *retcode = -1;
       return -1;
@@ -401,7 +404,10 @@ static int _create_bind_mount_source_dir_in_newroot (
    /* TODO: check if source is eligible for auto-creation */
 
    RETFAIL_IF_NULL (
-      dirpath = join_str_pair ( (NEWROOT_MOUNTPOINT "/"), source )
+      dirpath = join_str_pair (
+         ( (*source == '/') ? NEWROOT_MOUNTPOINT : (NEWROOT_MOUNTPOINT "/") ),
+         source
+      )
    );
 
    initramfs_debug (
