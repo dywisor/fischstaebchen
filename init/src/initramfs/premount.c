@@ -352,11 +352,15 @@ static int _mount_ztmpfs_entry (
 
 static const char* _mount_get_mount_opt (
    const struct mntent* const entry,
-   const char* const opt, const size_t opt_len, const int is_bareword
+   const char* const opt, const int is_bareword
 ) {
    static const char* const def_val = "1";
 
    const char* substr;
+   size_t opt_len;
+
+   opt_len = strlen ( opt );
+   if ( opt_len < 1 ) { return NULL; }
 
    substr = hasmntopt ( entry, opt );
    if ( substr == NULL ) { return NULL; }
@@ -516,11 +520,11 @@ static int _mount_that_entry (
       return -1;
    }
 
-   if ( _mount_get_mount_opt ( entry, "loop", 4, 1 ) != NULL ) {
+   if ( _mount_get_mount_opt ( entry, "loop", 1 ) != NULL ) {
       mc.cfg |= MOUNT_CFG_NEED_LOOP;
    }
 
-   if ( _mount_get_mount_opt ( entry, "_netdev", 7, 1 ) != NULL ) {
+   if ( _mount_get_mount_opt ( entry, "_netdev", 1 ) != NULL ) {
       mc.cfg |= MOUNT_CFG_NEED_NETWORK;
    }
 
@@ -535,7 +539,7 @@ static int _mount_that_entry (
       }
    }
 
-   if ( _mount_get_mount_opt ( entry, "bind", 4, 1 ) != NULL ) {
+   if ( _mount_get_mount_opt ( entry, "bind", 1 ) != NULL ) {
       /* create source directory */
       if ( _create_bind_mount_source_dir_in_newroot ( mc.source ) != 0 ) {
          /* non-fatal, /newroot[<subpath>] could be readonly */
