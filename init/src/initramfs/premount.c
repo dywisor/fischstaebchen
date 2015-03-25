@@ -228,6 +228,10 @@ int initramfs_premount_all (
                   || ( str_startswith ( mp, "/UNION_ROOT/" ) != NULL )
                ) {
                   I_WANT_THAT_ENTRY();
+               } else {
+                  initramfs_debug (
+                     "Not premounting '%s': filtered out.", "\n", mp
+                  );
                }
                break;
 
