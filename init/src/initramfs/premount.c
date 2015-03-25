@@ -41,32 +41,33 @@ static int _initramfs_newroot_premount ( const char* const fstab_file ) {
    return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
 }
 
+static int _initramfs_newroot_premount_all ( const char* const fstab_file ) {
+   initramfs_info (
+      "Reading fstab file %s in no-filter mode", "\n", fstab_file
+   );
+   return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
+}
 
-#define _IGET_FSTAB_ANYOF(a,b) \
-   my_fstab_file = ( \
-      (access ( a, F_OK ) == 0) ? a : \
-         ( (access ( b, F_OK ) == 0) ? b : NULL ) \
-   )
 
-#define IGET_FSTABFILE(f)  \
-   _IGET_FSTAB_ANYOF ( \
-      GET_NEWROOT_PATH ( f ".premount" ), GET_NEWROOT_PATH ( f ) \
-   )
-
-#define IMOUNT_FSTABFILE(f)  \
+#define _IMOUNT_FSTABFILE(a)  \
    do { \
-      IGET_FSTABFILE ( f ); \
-      if ( my_fstab_file != NULL ) { \
-         ret = _initramfs_newroot_premount ( my_fstab_file ); \
+      if ( access ( (a ".premount"), F_OK ) == 0 ) { \
+         ret = _initramfs_newroot_premount_all ( (a ".premount") ); \
+         if ( ret != 0 ) { return ret; } \
+         \
+      } else if ( access ( a, F_OK ) == 0 ) { \
+         ret = _initramfs_newroot_premount ( a ); \
          if ( ret != 0 ) { return ret; } \
       } \
    } while (0)
 
 
+#define IMOUNT_FSTABFILE(f)  _IMOUNT_FSTABFILE(GET_NEWROOT_PATH(f))
+
+
 int initramfs_newroot_premount ( const char* const fstab_file ) {
    if ( fstab_file == NULL ) {
       int ret;
-      const char* my_fstab_file;
 
       ret = 127;
 
@@ -88,8 +89,7 @@ int initramfs_newroot_premount ( const char* const fstab_file ) {
 }
 
 #undef IMOUNT_FSTABFILE
-#undef IGET_FSTABFILE
-#undef _IGET_FSTAB_ANYOF
+#undef _IMOUNT_FSTABFILE
 
 static int _mount_that_entry (
    const char* const root,
