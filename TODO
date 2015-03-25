@@ -31,3 +31,4 @@ ENHANCEMENT     no resume from hibernate
 ENHANCEMENT     load keymap during boot
 ENHANCEMENT     no cryptsetup (luks), *cache, dmraid
 ENHANCEMENT     stagedive: write to disk
+ENHANCEMENT     init: when bind-mounting from volatile storage, create necessary dirs

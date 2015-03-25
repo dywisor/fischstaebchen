@@ -386,9 +386,6 @@ static const char* _mount_get_mount_opt (
    }
 }
 
-#define _mount_has_mount_opt(...)  \
-   ( ( _mount_get_mount_opt(__VA_ARGS__) == NULL ) ? 1 : 0 )
-
 static int _mount_that_entry (
    const char* const root,
    const char* const mp, const struct mntent* const entry
@@ -494,11 +491,11 @@ static int _mount_that_entry (
       return -1;
    }
 
-   if ( _mount_has_mount_opt ( entry, "loop", 4, 1 ) == 0 ) {
+   if ( _mount_get_mount_opt ( entry, "loop", 4, 1 ) != NULL ) {
       mc.cfg |= MOUNT_CFG_NEED_LOOP;
    }
 
-   if ( hasmntopt ( entry, "_netdev" ) != NULL ) {
+   if ( _mount_get_mount_opt ( entry, "_netdev", 7, 1 ) != NULL ) {
       mc.cfg |= MOUNT_CFG_NEED_NETWORK;
    }
 
@@ -512,6 +509,14 @@ static int _mount_that_entry (
          return PREMOUNT_CANNOT_MOUNT;
       }
    }
+
+/*
+   if ( _mount_get_mount_opt ( entry, "bind", 4, 1 ) != NULL ) {
+      // create source directory
+      // TODO: check if source directory is subpath of tmpfs/zram/.. mount
+      //       and create it only in that case
+   }
+*/
 
    initramfs_info (
       "Mounting %s on %s (%s)", "\n", mc.source, mc.target, mc.fstype
