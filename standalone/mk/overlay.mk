@@ -2,7 +2,7 @@ INITRAMFS_COMPONENTS += overlay
 
 INITRAMFS_OVERLAYS += base misc
 INITRAMFS_OVERLAYS += phaseout
-INITRAMFS_OVERLAYS += separate_usr squashed_rootfs
+INITRAMFS_OVERLAYS += separate_usr usr_rootfs
 INITRAMFS_OVERLAYS += union_mount_base union_mount
 INITRAMFS_OVERLAYS += stagedive
 #INITRAMFS_OVERLAYS += stagedive_bootstrap_arch
