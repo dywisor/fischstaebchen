@@ -109,6 +109,23 @@ __parse_@F@() {
                @V@_FILE=none
             ;;
 
+            base=*)
+               v0="${1#*=}"
+               case "${v0}" in
+                  '')
+                     v0=none
+                  ;;
+                  auto|none)
+                     true
+                  ;;
+                  *)
+                     if arg_is_file_uri "${v0}"; then
+                        @V@_FILE="${v0}"
+                     fi
+                  ;;
+               esac
+            ;;
+
             volatile|copy|import)
                @V@_COPY_FILES_TO_MEM=y
             ;;
