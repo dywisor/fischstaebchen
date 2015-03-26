@@ -58,7 +58,7 @@ usr_rootfs_import_check_set_flag_do() {
 _usr_rootfs_check_did_import_dir() {
    if test_fs_lexists "${1}/.did_usr_rootfs_import"; then
       return 0
-   elif test_fs_lexists "${1}/.did_sfsroot_import"
+   elif test_fs_lexists "${1}/.did_sfsroot_import"; then
       ewarn "Found deprecated did_sfsroot_import flagfile in ${1}!"
       return 0
    fi
