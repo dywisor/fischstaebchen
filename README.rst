@@ -84,8 +84,9 @@ Features
 
 * Union mounts (using aufs or overlayfs)
 
-  * Mount the rootfs, /usr or /etc as a combination of squashfs files,
-    tarballs, a disk and backing memory (tmpfs or zram)
+  * Mount the rootfs, /usr, /var and/or /etc
+    as a combination of squashfs files, tarballs,
+    a disk and backing memory (tmpfs or zram)
 
     .. Note::
 
@@ -848,7 +849,7 @@ overlay, overlayfs
 union mount
 -----------
 
-The ``squashed_usr``, ``etc`` and ``volatile_rootfs``
+The ``squashed_usr``, ``var``, ``etc`` and ``volatile_rootfs``
 cmdline parameters accept a number of comma-separated arguments:
 
    <file uri>, file=<file uri>
