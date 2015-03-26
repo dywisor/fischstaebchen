@@ -91,9 +91,6 @@ __parse_@F@() {
       if [ "${1}" = "yes" ]; then
          true
 
-      elif arg_is_file_uri "${1}"; then
-         @V@_FILE="${v0}"
-
       elif [ -n "@CALLBACK@" ] && \
          @CALLBACK@ "${1}"
       then
@@ -248,6 +245,13 @@ __parse_@F@() {
                @V@_FILE=auto
                @V@_BACKING_MEM=zram
                @V@_COPY_FILES_TO_MEM=y
+            ;;
+
+            ## (implicit) file uri?
+            *)
+               if arg_is_file_uri "${1}"; then
+                  @V@_FILE="${v0}"
+               fi
             ;;
          esac
 
