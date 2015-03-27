@@ -8,7 +8,6 @@ from __future__ import unicode_literals, division, generators
 from __future__ import print_function, nested_scopes, with_statement
 
 import sys
-import os
 import re
 
 def filter_escaped ( seq ):
@@ -115,9 +114,7 @@ def main ( exe, argv ):
                )
             # --
          # --
-
-   return os.EX_OK
-
+# --- end of main (...) ---
 
 if __name__ == '__main__':
-   sys.exit ( main ( sys.argv[0], sys.argv[1:] ) )
+   main ( sys.argv[0], sys.argv[1:] )

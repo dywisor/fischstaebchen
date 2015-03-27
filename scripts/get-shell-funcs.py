@@ -8,10 +8,8 @@ from __future__ import unicode_literals, division, generators
 from __future__ import print_function, nested_scopes, with_statement
 
 import argparse
-import os
 import sys
 import re
-
 
 
 def iread_func_names ( infiles ):
@@ -57,8 +55,6 @@ def main ( exe, argv ):
    for srcfile, lino, func_name in func_defs:
       writes ( outformat.format ( srcfile, lino, func_name ) )
 
-   return os.EX_OK
-
 
 if __name__ == '__main__':
-   sys.exit ( main ( sys.argv[0], sys.argv[1:] ) )
+   main ( sys.argv[0], sys.argv[1:] )
