@@ -6,7 +6,6 @@ from __future__ import print_function, nested_scopes, with_statement
 
 import argparse
 import os
-import sys
 import errno
 
 def readfiles ( flist, ignore_missing, finfo_stream ):
@@ -67,7 +66,7 @@ def mergefiles ( *args, **kwargs ):
    # --
 # --- end of mergefiles (...) ---
 
-if __name__ == '__main__':
+def main():
    parser = argparse.ArgumentParser()
    parser.add_argument ( 'infiles', nargs='+', metavar='<file>' )
    parser.add_argument ( '-O', '--outfile',
@@ -83,4 +82,8 @@ if __name__ == '__main__':
          mergefiles(config.infiles, config.ignore_missing, None)
       )
    )
+# --- end of main (...) ---
+
+if __name__ == '__main__':
+   main()
 # --
