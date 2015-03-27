@@ -93,7 +93,10 @@ exit_code=0
 for __HOOK__ in ${hooks}; do
    get_hookfile "${__HOOK__}"
 
-   if ! ( loadscript_only "${hookfile}"; ); then
+   if ! (
+      loadscript_zap_env || :
+      loadscript_simple "${hookfile}"
+   ); then
       exit_code=2
       eerror "Failed to run hook ${__HOOK__} (${hookfile})"
       break

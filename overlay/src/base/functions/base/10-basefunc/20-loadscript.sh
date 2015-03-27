@@ -17,40 +17,6 @@ loadscript_zap_env() {
 }
 loadscript_zap_env
 
-__loadscript_set_vars() {
-   case "${1:?}" in
-      */)
-         return @@EX_USAGE@@
-      ;;
-      */*)
-         __DIR__="${1%/*}"
-         __FILE__="${1}"
-         __FNAME__="${__FILE__##*/}"
-      ;;
-      *)
-         __DIR__="${PWD:?}"
-         __FILE__="${__DIR__}/${1}"
-         __FNAME__="${1}"
-      ;;
-   esac
-   __NAME__="${__FNAME__%.*}"
-}
-
-loadscript_only() {
-   <%%locals !\
-      | __LOADSCRIPT_SUBSHELL      !\
-      | F_LOADSCRIPT_FILTER        !\
-      | F_LOADSCRIPT_SETENV_PRE    !\
-      | F_LOADSCRIPT_SETENV_HOOK   !\
-      | F_LOADSCRIPT_DO_LOAD       !\
-      | F_LOADSCRIPT_SUCCESS_HOOK  !\
-      | F_LOADSCRIPT_SUCCESS       !\
-      | LOADSCRIPT_DETACH          !\
-   %>
-   <%%locals __FILE__ __FNAME__ __NAME__ __DIR__ %>
-   __loadscript_set_vars "${1:?}" && . "${1}"
-}
-
 __loadscript_do_load() {
    local fail
    local X_PHASEOUT_LOADSCRIPT_STATUS="${X_PHASEOUT_LOADSCRIPT_STATUS:-X}"
@@ -77,7 +43,7 @@ __loadscript() {
    : ${__LOADSCRIPT_SUBSHELL:?}
    <%%locals __FILE__ __FNAME__ __NAME__ __DIR__ %>
 
-   __loadscript_set_vars "${1:?}" || return ${?}
+   __loadscript_simple_set_file_vars "${1:?}" || return ${?}
 
    ## we do not "test -f %__FILE__" here,
    ## this allows lazy script generation.
