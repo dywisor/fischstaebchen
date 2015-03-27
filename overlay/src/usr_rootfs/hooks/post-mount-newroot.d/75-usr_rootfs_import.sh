@@ -142,7 +142,7 @@ _import_from_usr_rootfs_process_file_item() {
          usr_rootfs_do_import_dir "${v0}" || return
       ;;
 
-      cp|copy)
+      cp|copy|bind)
          if test -h "${v0}"; then
             usr_rootfs_do_import_symlink "${v0}" || return
          else
