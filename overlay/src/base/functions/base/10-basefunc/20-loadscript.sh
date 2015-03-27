@@ -15,7 +15,10 @@ loadscript_zap_env() {
    LOADSCRIPT_DETACH=n
    ##X_PHASEOUT_LOADSCRIPT_STATUS=
 }
+
+F_LOADSCRIPT_ZAP_ENV=loadscript_zap_env
 loadscript_zap_env
+
 
 __loadscript_do_load() {
    local fail

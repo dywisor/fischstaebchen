@@ -5,8 +5,8 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-loadscript_or_die "${__DIR__}/_functions.sh"
-. "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-staging.sh" || die "#fload staging"
+loadscript_simple_or_die "${__DIR__}/_functions.sh"
+loadscript_simple_or_die "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-staging.sh"
 
 
 archstrap_staging_only__base() {

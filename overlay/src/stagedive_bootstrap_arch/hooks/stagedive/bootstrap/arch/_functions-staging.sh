@@ -19,7 +19,7 @@ _archstrap_do_run_bootstrap_staging() {
    %>
 
    [ ${#} -eq 0 ] || die "Cannot bootstrap staging: var(s) not set: ${*}"
-   runscript_or_die "${_ARCH_BOOTSTRAP_SRCDIR:?}/do_bootstrap_staging.sh"
+   runscript_simple_or_die "${_ARCH_BOOTSTRAP_SRCDIR:?}/do_bootstrap_staging.sh"
 }
 
 archstrap_set_staging() {

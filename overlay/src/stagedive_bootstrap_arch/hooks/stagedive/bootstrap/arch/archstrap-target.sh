@@ -5,9 +5,9 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-loadscript_or_die "${__DIR__}/_functions.sh"
-. "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-staging.sh" || die "#fload target"
-. "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-target.sh"  || die "#fload staging"
+loadscript_simple_or_die "${__DIR__}/_functions.sh"
+loadscript_simple_or_die "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-staging.sh"
+loadscript_simple_or_die "${_ARCH_BOOTSTRAP_SRCDIR:?}/_functions-target.sh"
 
 
 ## .bootstrap files usually need to call this function only

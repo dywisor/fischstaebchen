@@ -44,7 +44,7 @@ my_um_run_hook() {
 
    if [ -f "${UM_HOOK}" ]; then
       veinfo "Sourcing union mount hook ${UM_PHASE}"
-      loadscript_or_die "${UM_HOOK}"
+      loadscript_simple_or_die "${UM_HOOK}"
       UM_LAYER=
    fi
 }

@@ -7,7 +7,7 @@
 stagedive_bootstrap_load_config() {
    <%%zapvars -p bootstrap_ path name uri size md5 sha1 sha256 sha512 %>
 
-   loadscript_or_die "${STAGEDIVE_BOOTSTRAP_CFG:?}"
+   loadscript_simple_or_die "${STAGEDIVE_BOOTSTRAP_CFG:?}"
 
    <%% foreach_static n !\
       | name uri ::: !\

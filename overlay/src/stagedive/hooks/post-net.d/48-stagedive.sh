@@ -110,7 +110,7 @@ if [ ! -f "${f}" ]; then
       die "stagedive autoset not implemented for type ${STAGEDIVE_TYPE}!"
    fi
 fi
-loadscript_or_die "${f}"
+loadscript_simple_or_die "${f}"
 
 ## check whether setup is sufficient
 [ -f "${STAGEDIVE_BOOTSTRAP_CFG}" ] && \

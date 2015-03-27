@@ -59,7 +59,7 @@ autodie test -f "${netcfg_file}"
 net_iftype=
 net_ifaces=
 net_ip4_addr=
-loadscript_or_die "${netcfg_file}"
+loadscript_simple_or_die "${netcfg_file}"
 
 {
    {

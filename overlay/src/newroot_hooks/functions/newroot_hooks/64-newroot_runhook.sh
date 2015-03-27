@@ -11,7 +11,7 @@ newroot_run_hook__subshell() {
       newroot_hook__setup_env_do_export initramfs
       set -- "${NEWROOT}"
 
-      . "${hook_file}"
+      loadscript_simple "${hook_file}"
    )
 }
 
@@ -29,7 +29,7 @@ newroot_run_hook__loadscript() {
 
    newroot_hook__setup_env_initramfs
 
-   . "${hook_file}"
+   loadscript_simple "${hook_file}"
 }
 
 newroot_run_hook__chroot_exec() {

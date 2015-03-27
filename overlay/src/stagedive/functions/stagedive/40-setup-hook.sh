@@ -23,7 +23,7 @@ stagedive_inherit() {
 
    elif [ -f "${stage_cfgfile}" ]; then
       __stagedive_tro="${__stagedive_tro} ${1}"
-      loadscript_or_die "${stage_cfgfile}"
+      loadscript_simple_or_die "${stage_cfgfile}"
 
    else
       die "missing stagedive profile file: ${1} (${stage_cfgfile})"
@@ -42,8 +42,6 @@ _stagedive_run_setup_hooks() {
 ## )
 ##
 __stagedive_run_setup_hooks() {
-   ## needs subshell or local"ize" phaseout + loadscript vars
-
    <%%locals __stagedive_tro have_any_hook %>
    <%%locals profile=${1:?} ROOT=${2:?} hook_mask=${3:-none} %>
 
@@ -80,7 +78,7 @@ __stagedive_run_setup_hooks() {
    ## run hooks
    autodie phaseout_init "stagedive-setup-${STAGEDIVE_TYPE}"
 
-   loadscript_if_exists_or_die "${STAGEDIVE_CONFIG_ROOT}/env.sh"
+   loadscript_simple_if_exists_or_die "${STAGEDIVE_CONFIG_ROOT}/env.sh"
 
    __stagedive_tro=
    stagedive_inherit "${STAGEDIVE_TYPE}"

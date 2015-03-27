@@ -18,7 +18,7 @@ fi
 __HAVE_ARCH_BOOTSTRAP_BASE_FUNCTIONS=y
 
 if [ -z "${__HAVE_ARCH_BOOTSTRAP_ENV-}" ]; then
-   loadscript_or_die "${__DIR__}/env.sh"
+   loadscript_simple_or_die "${__DIR__}/env.sh"
 fi
 : ${_ARCH_BOOTSTRAP_SRCDIR:?}
 

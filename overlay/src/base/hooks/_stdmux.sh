@@ -94,7 +94,7 @@ for __HOOK__ in ${hooks}; do
    get_hookfile "${__HOOK__}"
 
    if ! (
-      loadscript_zap_env || :
+      ${F_LOADSCRIPT_ZAP_ENV:-true} || :
       loadscript_simple "${hookfile}"
    ); then
       exit_code=2
