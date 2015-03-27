@@ -85,17 +85,18 @@ def main():
 
 
 def run_main ( main_func, *args, **kwargs ):
+   EX_OK = getattr ( os, 'EX_OK', 0 )
    try:
       excode = main_func ( *args, **kwargs )
 
    except KeyboardInterrupt:
-      excode = os.EX_OK ^ 130
+      excode = EX_OK ^ 130
 
    else:
       if excode is None or excode is True:
-         excode = os.EX_OK
+         excode = EX_OK
       elif excode is False:
-         excode = os.EX_OK ^ 1
+         excode = EX_OK ^ 1
 
    return excode
 
