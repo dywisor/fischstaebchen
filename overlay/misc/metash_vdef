@@ -79,3 +79,7 @@ GITHUB_ARCHIVE_SITE   = api.github.com/repos
 DOTFILES_TBT_SRC_SITE = github://dywisor/things-beyond-things
 
 WGET_OPTS =
+
+
+!noformat
+CASE_RELPATH_PARENT = '../'*|*'/..'|*'/../'*

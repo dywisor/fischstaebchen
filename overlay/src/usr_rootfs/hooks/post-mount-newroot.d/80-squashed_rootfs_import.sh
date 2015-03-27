@@ -98,8 +98,8 @@ usr_rootfs_do_import_symlink() {
       copy_symlink "${1}" "${NEWROOT}/${src_name}" "${src_name}"
 }
 
-## @autodie usr_rootfs_do_import_any ( src, **usr_rootfs_import_variant )
-usr_rootfs_do_import_any() {
+## @autodie _usr_rootfs_glob_do_import_any ( src, **usr_rootfs_import_variant )
+_usr_rootfs_glob_do_import_any() {
    ## note that '! -e' does not imply '! -h'
    if test -h "${1}"; then
       usr_rootfs_do_import_symlink "${1}"
@@ -114,18 +114,22 @@ import_all_from_usr_rootfs_dir() {
    usr_rootfs_import_variant="${USR_ROOTFS_METHOD:?}"
 
    <%%foreach src_iter "${NEWROOT_USR_ROOTFS}/"* +++ !\
-      | usr_rootfs_do_import_any "${src_iter}" %>
+      | _usr_rootfs_glob_do_import_any "${src_iter}" %>
 }
 
 ## @autodie _import_from_usr_rootfs_process_file_item (
-##    **usr_rootfs_import_variant, **arg
+##    [source_file], **usr_rootfs_import_variant, **arg
 ## )
 _import_from_usr_rootfs_process_file_item() {
    <%%locals v0 %>
 
    case "${arg}" in
-      '../'*|*'/..'|*'/../'*)
-         die "in file ${1}: bad src arg: ${arg}" || return
+      @@CASE_RELPATH_PARENT@@)
+         if [ -n "${1-}" ]; then
+            die "in file ${1}: bad src arg: ${arg}" || return
+         else
+            die "bad src arg: ${arg}" || return
+         fi
       ;;
    esac
 
@@ -134,6 +138,7 @@ _import_from_usr_rootfs_process_file_item() {
    case "${usr_rootfs_import_variant}" in
       tar|untar)
          [ -f "${v0}" ] || locate_tarball_file "${v0}" || return
+         # locate_tarball_file() modifies %v0
          usr_rootfs_do_import_dir "${v0}" || return
       ;;
 
@@ -161,7 +166,7 @@ import_from_usr_rootfs_readfile() {
             @@NOP@@
          ;;
          *)
-            autodie _import_from_usr_rootfs_process_file_item || return
+            autodie _import_from_usr_rootfs_process_file_item "${1}" || return
       esac
    done < "${1}"
 }
