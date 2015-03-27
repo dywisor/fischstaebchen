@@ -171,6 +171,21 @@ import_from_usr_rootfs_readfile() {
    done < "${1}"
 }
 
+## @autodie do_import_from_usr_rootfs ( variant, src_arg, ... )
+##
+do_import_from_usr_rootfs() {
+   <%%locals usr_rootfs_import_variant arg %>
+
+   [ ${#} -ge 2 ] && [ -n "${1}" ] && [ -n "${2}" ] || \
+      die "do_import(): bad usage." ${EX_USAGE}
+
+   usr_rootfs_import_variant="${1}"
+   arg="${2}"
+
+   shift 2 && \
+   autodie _import_from_usr_rootfs_process_file_item "${__FILE__-}" "${@}"
+}
+
 
 get_newroot_rw || exit
 
@@ -183,7 +198,16 @@ fi
 
 <% if ALLOW_NEWROOT_HOOKS %>
 if [ -f "${NEWROOT_USR_ROOTFS}/setup.sh" ]; then
-   ( . "${NEWROOT_USR_ROOTFS}/setup.sh"; ) || \
-      die "@@_MSGPRE@@: setup.sh failed!"
+   (
+      ## @autodie do_import ( import_variant, src, ... )
+      do_import() {
+         do_import_from_usr_rootfs "${@}"
+      }
+
+      S="${NEWROOT_USR_ROOTFS}"
+      D="${NEWROOT}"
+
+      loadscript_simple "${NEWROOT_USR_ROOTFS}/setup.sh"
+   ) || die "@@_MSGPRE@@: setup.sh failed!"
 fi
 <% endif %>
