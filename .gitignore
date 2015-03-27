@@ -27,3 +27,4 @@
 
 # files/dirs to ignore
 .keep
+/.idea
