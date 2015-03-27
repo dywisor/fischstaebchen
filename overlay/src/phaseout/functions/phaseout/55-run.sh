@@ -11,17 +11,16 @@ phaseout_run() {
 }
 
 phaseout_run_or_die() {
-   phaseout_run "${@}" || die "Failed to run ${PHASEOUT_HOOK_NAMESPACE:-???} hooks!"
+   phaseout_run "${@}" || \
+      die "Failed to run ${PHASEOUT_HOOK_NAMESPACE:-???} hooks!"
 }
 
 phaseout_run_if_exist() {
-   _phaseout_run_if_exist "${@}" && \
-   _phaseout_waitfor_hooks && \
-   _phaseout_get_and_report_failed
+   phaseout_run -e "${@}"
 }
 
 phaseout_run_if_exist_or_die() {
-   phaseout_run_if_exist "${@}" || die "Failed to run ${PHASEOUT_HOOK_NAMESPACE:-???} hooks!"
+   phaseout_run_or_die -e "${@}"
 }
 
 _phaseout_run_from_hookdir() {

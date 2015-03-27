@@ -4,51 +4,6 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-__phaseout_do_run_hook() {
-   local retcode
-
-   retcode=0
-   case "${PHASEOUT_HOOK_MODE:-}" in
-      '')
-         die "phaseout_setup() must be called before run()."
-      ;;
-
-      single)
-         if runscript "${@}"; then
-            veinfo "run ${1}: success"
-         else
-            retcode=${?}
-            eerror "Failed to run ${1}."
-         fi
-      ;;
-
-<% if PHASEOUT_RUN_HOOKS_IN_PARALLEL %>
-      parallel)
-         if runscript "${@}"; then
-            veinfo "start ${1}: success"
-         else
-            retcode=${?}
-            eerror "Failed to start ${1}."
-         fi
-      ;;
-<% endif %>
-
-      load)
-         if loadscript "${@}"; then
-            veinfo "load ${1}: success"
-         else
-            retcode=${?}
-            eerror "Failed to load ${1}"
-         fi
-      ;;
-
-      *)
-         die "unknown hook mode: ${PHASEOUT_HOOK_MODE}"
-      ;;
-   esac
-   return ${retcode}
-}
-
 _phaseout_waitfor_hooks() {
 <% if PHASEOUT_RUN_HOOKS_IN_PARALLEL %>
    case "${PHASEOUT_HOOK_MODE:?}" in
@@ -96,48 +51,23 @@ _phaseout_get_and_report_failed() {
 }
 
 _phaseout_run() {
-   <%%locals failcode keep_going %>
-
-   keep_going=
-   case "${1-}" in
-      '-k'|'--keep-going') keep_going=y; @@SHIFT_OR_RET@@ ;;
-   esac
-
-   failcode=0
+   <%%locals failcode keep_going=y ignore_missing= %>
    while [ ${#} -gt 0 ]; do
-      if [ ! -f "${1}" ]; then
-         eerror "hook file does not exist: ${1}"
-         failcode=127
-         [ -n "${keep_going}" ] || return ${failcode}
-
-      elif __phaseout_do_run_hook "${1}"; then
-         @@NOP@@
-
-      else
-         failcode=${?}
-         [ -n "${keep_going}" ] || return ${failcode}
-      fi
-
-      shift
+      case "${1-}" in
+         '-k'|'--keep-going')      keep_going=y;     @@SHIFT_OR_RET@@ ;;
+         '-e'|'--ignore-missing')  ignore_missing=y; @@SHIFT_OR_RET@@ ;;
+         '--') @@SHIFT_OR_RET@@; break ;;
+         *) break ;;
+      esac
    done
 
-   return ${failcode}
-}
-
-_phaseout_run_if_exist() {
-   <%%locals failcode keep_going %>
-
-   keep_going=
-   case "${1-}" in
-      '-k'|'--keep-going') keep_going=y; @@SHIFT_OR_RET@@ ;;
-   esac
+   if [ -z "${ignore_missing}" ]; then
+      [ -n "${keep_going}" ] && ignore_missing=fail || ignore_missing=error
+   fi
 
    failcode=0
    while [ ${#} -gt 0 ]; do
-      if [ ! -f "${1}" ]; then
-         @@NOP@@
-
-      elif __phaseout_do_run_hook "${1}"; then
+      if __phaseout_run_hook_dispatch "${1}" "${ignore_missing}"; then
          @@NOP@@
 
       else
