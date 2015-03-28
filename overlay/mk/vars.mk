@@ -1,10 +1,3 @@
-X_METASH = $(BUILDSCRIPTS_DIR)/metash
-METASH_VDEF_OPTS  = -F '$(__PRJROOT)/misc/metash_vdef'
-ifneq ($(OVERLAY_DEFAULTS_FILE),)
-METASH_VDEF_OPTS += -F '$(OVERLAY_DEFAULTS_FILE)'
-endif
-
-
 FILESDIR       := $(S)/misc/files
 OVERLAY_SRCDIR := $(abspath $(S)/src)
 OVERLAY_O      := $(abspath $(O)/overlay)
@@ -75,11 +68,8 @@ OVERLAY_SED_EDIT = $(SED) $(OVERLAY_SED_EDIT_EXPR) -i --
 endif
 
 # vars handled by sed-edit
-METASH_OPTS  = $(METASH_VDEF_OPTS)
 METASH_OPTS += $(foreach x,INITDIR HOOKDIR FUNCTIONS ENVFILE METASCRIPTDIR,-V $(x)=@@$(x)@@)
 
 ifneq ($(OVERLAY_XSHELL),)
 METASH_OPTS += $(foreach x,XSHELL,-V $(x)=@@$(x)@@)
 endif
-
-RUN_METASH  = $(X_METASH) $(METASH_OPTS)

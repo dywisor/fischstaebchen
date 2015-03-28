@@ -98,12 +98,8 @@ $(O)/.stamp_overlay_functions_$(2): \
 	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
 	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
 
-	if test -e '$$(<)/functions'; then \
-		$(SHELL) $(BUILDSCRIPTS_DIR)/run-metash \
-			'$$(<)/functions' \
-			'$(OVERLAY_O_TMPROOT)/$$(*)/functions' \
-			-- $(RUN_METASH); \
-	fi
+	$(call f_run_metash_convert_dir_ifexist,\
+		$$(<)/functions,$(OVERLAY_O_TMPROOT)/$$(*)/functions)
 
 	find $(OVERLAY_O_TMPROOT)/$$(*)/functions -type f -name '*.sh' | \
 		xargs -n 1 $(SHELL) -n
@@ -119,13 +115,8 @@ $(O)/.stamp_overlay_hooks_$(2): \
 	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
 	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
 
-	set -e; \
-	if test -e '$$(<)/hooks'; then \
-		$(SHELL) $(BUILDSCRIPTS_DIR)/run-metash \
-			'$$(<)/hooks' \
-			'$(OVERLAY_O_TMPROOT)/$$(*)/hooks' \
-			-- $(RUN_METASH); \
-	fi
+	$(call f_run_metash_convert_dir_ifexist,\
+		$$(<)/hooks,$(OVERLAY_O_TMPROOT)/$$(*)/hooks)
 
 	$(call f_copy_tree,$(OVERLAY_O_TMPROOT)/$$(*)/hooks,$(OVERLAY_O_HOOKDIR))
 	touch '$$(@)'
