@@ -5,6 +5,8 @@
 ##
 
 <% if HAVE_SHA1=1 %>
+# shellcheck disable=SC2120
 io_sha1()     { sha1sum "$@" @@NO_STDERR@@ | io_first_whitespace_field; }
+# shellcheck disable=SC2119
 str_to_sha1() { sha1="$(printf "%s" "${1}" | io_sha1)"; [ -n "${sha1}" ]; }
 <% endif %>

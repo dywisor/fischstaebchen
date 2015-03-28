@@ -27,5 +27,6 @@ stagedive_bootstrap_eject_basemounts() {
 }
 
 stagedive_bootstrap_kill_chroot_processes() {
+   # shellcheck disable=SC2031
    kill_chroot_processes "${@}"
 }

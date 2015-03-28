@@ -77,6 +77,7 @@ while [ $# -gt 0 ]; do
    esac
 done
 
+# shellcheck disable=SC2015
 [ -n "${1-}" ] && [ -n "${2-}" ] || \
    die "missing branches and/or mountpoint arg!" 64
 
@@ -85,6 +86,7 @@ add_branches() {
    local br
 
    # "IFS=...", "set -f" set by caller
+   # shellcheck disable=SC2048
    for br in ${*}; do
       case "${br}" in
          '')

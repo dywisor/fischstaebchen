@@ -9,7 +9,8 @@ phaseout_apply_mask() {
    <%%locals mask_iter file_iter name is_masked did_remove_all_hooks %>
    [ -n "${PHASEOUT_HOOK_DIR-}" ] || die "PHASEOUT_HOOK_DIR is not set."
 
-   set -f; set -- ${*}; set +f;
+   # shellcheck disable=SC2048
+   { set -f; set -- ${*}; set +f; }
    [ ${#} -gt 0 ] || return @@EX_USAGE@@
 
    for mask_iter; do

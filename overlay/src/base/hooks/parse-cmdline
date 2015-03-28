@@ -31,6 +31,7 @@ fi
 split_str() {
    #<%%retvar v0%>
    <%%local IFS<=${1?}%>
+   # shellcheck disable=SC2048
    set -- ${*}
    <%%ifs%>
    v0="${*}"

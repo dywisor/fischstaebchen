@@ -12,6 +12,7 @@
 ##
 
 <% if DYNAMIC_LOGFILE_FUNCTIONS=0 %>
+# shellcheck disable=SC2059
 logfile_printf() {
    [ ! -f "${INITRAMFS_LOGFILE:-/}" ] || \
    printf "${@}" >> "${INITRAMFS_LOGFILE}"
@@ -23,6 +24,7 @@ logfile_write() {
 }
 <% else %>
 if [ -f "${INITRAMFS_LOGFILE:-/}" ]; then
+# shellcheck disable=SC2059
 logfile_printf() { printf "${@}" >> "${INITRAMFS_LOGFILE}"; }
 
 logfile_write() {

@@ -85,7 +85,7 @@ esac
 
 proxy="${3-}"
 case "${proxy}" in
-   '-'|'/') proxy= ;;
+   '-'|'/') proxy="" ;;
    *) proxy="${proxy%/}/" ;;
 esac
 

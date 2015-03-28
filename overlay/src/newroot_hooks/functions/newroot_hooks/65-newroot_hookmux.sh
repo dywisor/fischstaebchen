@@ -16,6 +16,7 @@ newroot_do_run_hooks() {
 ##
 newroot_rw_do_run_hooks() {
    [ ${#} -gt 0 ] || return 0
+   # shellcheck disable=SC2031
    autodie get_newroot_rw && _newroot_do_run_hooks "${@}"
 }
 
@@ -35,8 +36,10 @@ newroot_do_run_hooks_if_exist() {
 ##
 newroot_rw_do_run_hooks_if_exist() {
    # racy
+   # shellcheck disable=SC2031
    [ ${#} -gt 0 ] && ( get_any_file "${@}"; ) || return 0
 
+   # shellcheck disable=SC2031
    get_newroot_rw && \
    newroot_do_run_hooks_if_exist "${@}"
 }

@@ -29,5 +29,6 @@ stagedive_bootstrap_print_banner() {
 
 stagedive_bootstrap_default_init() {
    stagedive_bootstrap_load_config
+   # shellcheck disable=SC2031
    stagedive_bootstrap_print_banner "${@}"
 }

@@ -1,4 +1,4 @@
-#!/bin/busybox ash
+#!/bin/sh
 ## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
 ##
 ## Distributed under the terms of the MIT license.

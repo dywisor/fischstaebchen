@@ -160,6 +160,7 @@ _import_from_usr_rootfs_process_file_item() {
 import_from_usr_rootfs_readfile() {
    <%%locals usr_rootfs_import_variant arg %>
 
+   # shellcheck disable=SC2094
    while read -r usr_rootfs_import_variant arg; do
       case "${usr_rootfs_import_variant}" in
          ''|'#'*)
@@ -176,6 +177,7 @@ import_from_usr_rootfs_readfile() {
 do_import_from_usr_rootfs() {
    <%%locals usr_rootfs_import_variant arg %>
 
+   # shellcheck disable=SC2015
    [ ${#} -ge 2 ] && [ -n "${1}" ] && [ -n "${2}" ] || \
       die "do_import(): bad usage." ${EX_USAGE}
 

@@ -23,6 +23,7 @@ do_auxmount_disk_dev() {
        *) dev="/dev/${1#./}" ;;
    esac
 
+   # shellcheck disable=SC2015
    dev="$( strip_fspath "${dev}" )" && [ -n "${dev}" ] || die
 
    _auxmount_hash_rel_mp "${dev}" dev || die

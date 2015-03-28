@@ -42,7 +42,7 @@ _root_set_abspaths() {
       !\
       |{NL} !\
       |{I}case "${{RREL_{name}?}}" in{NL} !\
-      |{I}   ''|_*) ROOT_{name}= ;;{NL} !\
+      |{I}   ''|_*) ROOT_{name}="" ;;{NL} !\
       |{I}   *) ROOT_{name}="${{ROOT%/}}/${{RREL_{name}#/}}" ;;{NL} !\
       |{I}esac{NL} !\
       |{I}R_{name}="${{ROOT_{name}}}" !\

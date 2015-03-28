@@ -30,6 +30,7 @@ _union_get_default_fstype() {
       _union_detect_default_fstype ${UNION_MOUNT_FSTYPE-}
 }
 
+# shellcheck disable=SC2120
 union_mount_set_fstype() {
    if [ -z "${1-}" ]; then
       _union_get_default_fstype

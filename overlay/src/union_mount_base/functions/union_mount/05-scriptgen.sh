@@ -19,7 +19,7 @@ gen_union_mount_script() {
    %>
 
    case "${AUTO_FILES}" in
-      _|none) AUTO_FILES= ;;
+      _|none) AUTO_FILES="" ;;
    esac
 
    set -- \

@@ -1,4 +1,4 @@
-#!/bin/busybox ash
+#!@@XSHELL@@
 ## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
 ##
 ## Distributed under the terms of the MIT license.
@@ -86,6 +86,7 @@ fstab_file="${NEWROOT}/etc/fstab"
 makedirs_file="${NEWROOT_CONFDIR}/makedirs"
 
 if [ -f "${fstab_file}" ] || [ -f "${makedirs_file}" ]; then
+   # shellcheck disable=SC2015
    get_newroot_rw_nonfatal && makedirs_main || \
       ewarn "Failed to create directories in newroot!"
 fi

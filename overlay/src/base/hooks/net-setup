@@ -94,8 +94,14 @@ set -- ${ethers}
 
 
 ## (late) helper functions
-print_line() { printf "%s\n" "${*}"; }
-print_line_indent() { printf "   %s\n" "${*}"; }
+print_line() { printf "%s\n" "${*-}"; }
+print_line_indent() {
+   if [ ${#} -eq 0 ]; then
+      printf "\n"
+   else
+      printf "   %s\n" "${*}"
+   fi
+}
 
 std_down_actions() {
 cat << EOF

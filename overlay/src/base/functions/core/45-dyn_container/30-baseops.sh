@@ -16,6 +16,7 @@ _dyncontainer_get_size() {
    <%%retvar size %>
    <%%varcheck 1 %>
 
+   # shellcheck disable=SC2046
    set -- $( du -xms -- "${1}" ) && \
    { test "${1:--1}" -ge 0; } @@NO_STDERR@@ && \
    size="${1}"
@@ -33,7 +34,7 @@ _dyncontainer_downsize() {
    _dyncontainer_get_size "${path}" || \
       die "failed to get size of dyncontainer ${path}"
 
-   new_size=$(( ${size} + 1 + ${DYNCONTAINER_SPARE_SIZE:-4} ))
+   new_size=$(( size + 1 + ${DYNCONTAINER_SPARE_SIZE:-4} ))
 
    xremount "${path}" size=${new_size}m
    v0="${new_size}"

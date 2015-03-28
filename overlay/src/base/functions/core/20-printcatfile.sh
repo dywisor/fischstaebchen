@@ -24,6 +24,7 @@ cat_or_print() {
       ;;
    esac
 
+   # shellcheck disable=SC2059
    printf "${@}"
 }
 

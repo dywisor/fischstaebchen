@@ -113,11 +113,13 @@ fi
 loadscript_simple_or_die "${f}"
 
 ## check whether setup is sufficient
+# shellcheck disable=SC2015
 [ -f "${STAGEDIVE_BOOTSTRAP_CFG}" ] && \
 [ -s "${STAGEDIVE_BOOTSTRAP_CFG}" ] || die "bootstrap config file is empty!"
 
 ## install default hook if available
 if [ ! -f "${STAGEDIVE_BOOTSTRAP_HOOK}" ]; then
+   # shellcheck disable=SC2066
    for f in \
       "${STAGEDIVE_BOOTSTRAP_SRCDIR}/${STAGEDIVE_TYPE}.bootstrap"
    do
@@ -128,5 +130,6 @@ if [ ! -f "${STAGEDIVE_BOOTSTRAP_HOOK}" ]; then
    done
 fi
 
+# shellcheck disable=SC2015
 [ -f "${STAGEDIVE_BOOTSTRAP_HOOK}" ] && \
 [ -s "${STAGEDIVE_BOOTSTRAP_HOOK}" ] || die "did not set up bootstrap hook!"

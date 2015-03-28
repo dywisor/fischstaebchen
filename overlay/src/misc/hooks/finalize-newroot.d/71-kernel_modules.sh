@@ -1,4 +1,4 @@
-#!/bin/busybox ash
+#!@@XSHELL@@
 ## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
 ##
 ## Distributed under the terms of the MIT license.
@@ -62,6 +62,7 @@ transfer_modules_and_firmware() {
 
 
 if [ -n "${want_xfer_fw}${want_xfer_kmod}" ]; then
+   # shellcheck disable=SC2015
    get_newroot_rw_nonfatal && \
    transfer_modules_and_firmware || \
       eerror "failed to transfer kernel modules/firmware!"

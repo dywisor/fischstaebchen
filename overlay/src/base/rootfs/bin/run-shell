@@ -1,5 +1,6 @@
-#!/bin/busybox sh
+#!@@XSHELL@@
+# shellcheck disable=SC2093
 exec setsid cttyhack sh
 
-printf "%s\n" "failed to launch shell with setsid/cttyhack!"
+printf "%s\n" "Failed to launch shell with setsid/cttyhack!"
 exec /bin/busybox sh

@@ -15,6 +15,7 @@ kernel_modules__get_kver() {
    return 0
 }
 
+# shellcheck disable=SC2120
 kernel_modules__get_kver_and_mod_dir() {
    mod_dir=
    kernel_modules__get_kver "${@}" || return @@EX_NOT_SUPPORTED@@
@@ -27,6 +28,7 @@ have_kernel_module_loaded() {
    <%%retvar v0 %>
    <%%locals kver mod_dir %>
 
+   # shellcheck disable=SC2119
    kernel_modules__get_kver_and_mod_dir || return
    [ -f "${mod_dir}/modules.builtin" ] || return @@EX_NOT_SUPPORTED@@
    [ -e /proc/modules ] || return @@EX_NOT_SUPPORTED@@

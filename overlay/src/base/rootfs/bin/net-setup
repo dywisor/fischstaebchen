@@ -1,4 +1,4 @@
-#!/bin/sh
+#!@@XSHELL@@
 if \
    [ -f /run/initramfs/config/have-net ] && \
    [ -s /run/initramfs/config/network.interfaces ]

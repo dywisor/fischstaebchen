@@ -1,2 +1,2 @@
-#!/bin/sh
+#!@@XSHELL@@
 exec mount -o remount,ro "${@}"

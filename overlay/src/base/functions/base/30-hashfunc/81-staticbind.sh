@@ -17,9 +17,11 @@ HAVE_MD5=@@HAVE_MD5@@
 
 <% if HAVE_SHA1 %>
 HASH_TYPE=sha1
+# shellcheck disable=SC2120
 io_hash() { sha1sum "$@" @@NO_STDERR@@ | io_first_whitespace_field; }
 <% elseif HAVE_MD5 %>
 HASH_TYPE=md5
+# shellcheck disable=SC2120
 io_hash() { md5sum "$@" @@NO_STDERR@@ | io_first_whitespace_field; }
 <% else %>
 HASH_TYPE=

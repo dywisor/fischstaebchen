@@ -156,6 +156,7 @@ int parse_file_uri (
 
       cifs)
          # breaks when share path contains space chars
+         # shellcheck disable=SC2046
          set -- $(printf "%s" "${srcpath}" | \
             sed -r -e 's,^([/]*[^/]+[/][^/]+)[/](.*)$,\1 \2,') || return
 

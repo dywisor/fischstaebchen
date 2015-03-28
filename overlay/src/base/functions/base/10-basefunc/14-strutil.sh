@@ -24,7 +24,8 @@ yesno() {
 ## @setf void get_regex_or_expr ( *wordlist, **expr! )
 get_regex_or_expr() {
    expr=
-   set -f; set -- ${*}; set +f
+   # shellcheck disable=SC2048
+   { set -f; set -- ${*}; set +f; }
    [ ${#} -gt 0 ] || return 1
 
    expr="${1}"; shift

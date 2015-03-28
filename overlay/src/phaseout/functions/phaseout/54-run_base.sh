@@ -28,7 +28,8 @@ _phaseout_get_failed() {
 }
 
 _phaseout_report_failed() {
-   set -f; set -- ${*}; set +f;
+   # shellcheck disable=SC2048
+   { set -f; set -- ${*}; set +f; }
    [ ${#} -gt 0 ] || return @@EX_USAGE@@
 
    eerror "The following hooks did not succeed:"

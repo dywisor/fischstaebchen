@@ -5,6 +5,7 @@
 ##
 
 union_mount_it() {
+   # shellcheck disable=SC2119
    union_mount_set_fstype
 
    case "${_UNION_FS_TYPE}" in

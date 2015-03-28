@@ -43,10 +43,12 @@ fi
 ##
 if [ -n "${HAVE_SHA1}" ]; then
 HASH_TYPE=sha1
+# shellcheck disable=SC2120
 io_hash() { sha1sum "$@" @@NO_STDERR@@ | io_first_whitespace_field; }
 
 elif [ -n "${HAVE_MD5}" ]; then
 HASH_TYPE=md5
+# shellcheck disable=SC2120
 io_hash() { md5sum "$@" @@NO_STDERR@@ | io_first_whitespace_field; }
 
 else

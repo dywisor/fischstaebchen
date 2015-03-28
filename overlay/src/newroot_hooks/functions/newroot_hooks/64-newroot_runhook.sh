@@ -7,6 +7,7 @@
 <% if ALLOW_NEWROOT_HOOKS %>
 
 newroot_run_hook__subshell() {
+   # shellcheck disable=SC2030
    (
       newroot_hook__setup_env_do_export initramfs
       set -- "${NEWROOT}"

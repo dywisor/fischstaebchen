@@ -6,11 +6,13 @@
 
 ## stagedive_want ( ["--"|"-r"|"-R"|"--recursive"], *name )
 stagedive_want() {
+   # shellcheck disable=SC2031
    _phaseout_install_local "${STAGEDIVE_HOOKS_SRCDIR}" "${@}"
 }
 
 ## stagedive_want_as ( name, as_name )
 stagedive_want_as() {
+   # shellcheck disable=SC2031
    _phaseout_install_local_as "${STAGEDIVE_HOOKS_SRCDIR}" "${@}"
 }
 
@@ -33,6 +35,7 @@ stagedive_inherit() {
 ## @autodie _stagedive_run_setup_hooks (...)
 ##
 _stagedive_run_setup_hooks() {
+   # shellcheck disable=SC2031
    ( __stagedive_run_setup_hooks "${@}"; ) || \
       die "Failed to run stagedive setup hooks!"
 }

@@ -69,6 +69,7 @@ if [ -n "${PACSTRAP_MIRROR}" ]; then
    copyfile_staging_to_target_overlay "${PACMAN_MIRRORLIST_REL}"
 fi
 
+# shellcheck disable=SC2015
 [ -f "${pacman_mirrorlist}" ] && [ -s "${pacman_mirrorlist}" ] || \
    die "${pacman_mirrorlist} is empty or missing."
 
@@ -122,9 +123,12 @@ sort -u \
    > "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list" || \
    die "Failed to create package group list!"
 
-[ -s "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list" ] && \
-package_group_list="$( cat "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list" )" && \
-[ -n "${package_group_list}" ] || die "Package group list is empty!"
+
+{
+   [ -s "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list" ] && \
+   package_group_list="$( cat "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list" )" && \
+   [ -n "${package_group_list}" ]
+} || die "Package group list is empty!"
 
 autodie rm -- "${ARCHSTRAP_PKG_GRPLIST_DIR}/group.list.in"
 

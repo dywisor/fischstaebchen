@@ -86,6 +86,7 @@ _archstrap_get_package_install_list() {
    fi
 
    shift 2 || return
+   # shellcheck disable=SC2048
    set -- ${*}
    [ "${1:-X}" != "--" ] || shift
 
@@ -119,6 +120,7 @@ _archstrap_get_pkg_grp_list() {
 
    filter_arg="${1?}"; shift
 
+   # shellcheck disable=SC2048
    set -- ${*}
    [ ${#} -gt 0 ] || return @@EX_USAGE@@
 
