@@ -15,7 +15,6 @@
 
 TODO            documentation.
 TODO            buildroot package: set XSHELL
-TODO            buildroot: defconfig
 ____            buildroot: remove==upstream apt-cacher-ng package
 TODO            stagedive: inject VOLATILE_ROOTFS_*FILE, dont reparse
 TODO            stagedive: uclibc TZ
@@ -24,6 +23,14 @@ TODO            stagedive bootstrap: optionally keep gentoo stage3 file
 TODO            overlay, init: phase-retry
                  (requires thoroughly-defined boot-phase status)
 TODO            init: consider using posix_spawn()/vfork() instead of fork()
+TODO            overlay: add support for init scripts
+                 (/etc/init.d, @@HOOKDIR@@/svc)
+                 + provide runscript wrapper
+                 + maintain a list of active scripts via symlinks in /run/<...>
+                 + stop scripts.
+                 + could migrate networking to this new facility
+TODO            stagedive: make it possible to override archstrap package lists
+TODO            overlay: split data (e.g. stagedive package list) from code
 INCOMPLETE      only rudimentary support for mdadm/lvm
 ENHANCEMENT     metash.py is just ugly.
 ENHANCEMENT     networking supports DHCP only
@@ -32,3 +39,4 @@ ENHANCEMENT     load keymap during boot
 ENHANCEMENT     no cryptsetup (luks), *cache, dmraid
 ENHANCEMENT     stagedive: write to disk
 ENHANCEMENT     init: when bind-mounting from volatile storage, create necessary dirs
+
