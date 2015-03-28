@@ -65,26 +65,11 @@ PHONY += _gen_functions_combine
 _gen_functions_combine: \
 	$(OVERLAY_O) _gen_functions_clean FORCE | $(_ALL_OVERLAY_TARGETS) _basedep_clean
 
-	# scan for files not supported (yet?)
-	! { find '$(OVERLAY_O_FUNCTIONS_DIR)/src/' -type f -name '*.in' | grep -- .; }
+	$(call f_combine_script_files,\
+		$(OVERLAY_O_FUNCTIONS_DIR)/src,\
+		$(OVERLAY_O_FUNCTIONS_DIR)/combined)
 
-	# create per-directory functions files
-	set -e; \
-	D='$(OVERLAY_O_FUNCTIONS_DIR)/combined'; \
-	for src in '$(OVERLAY_O_FUNCTIONS_DIR)/src/'*; do \
-		if test -e "$${src}"; then \
-			name="$${src##*/}"; \
-			\
-			if test -h "$${src}" || test ! -d "$${src}"; then \
-				printf  "%s\n"  "Cannot handle non-file $${name} ($${src})!"; \
-				exit 9; \
-			else \
-				$(BUILDSCRIPTS_DIR)/merge-scriptfiles \
-					-O "$${D}/$${name}.sh" \
-					$$( find "$${src}/" -type f -name '*.sh' | sort -V ); \
-			fi; \
-		fi; \
-	done
+
 
 # _INCLUDE_FILES_FROM ( include_order_file, srcdir, dstfile )
 #
@@ -103,7 +88,7 @@ define _INCLUDE_FILES_FROM
 			fi; \
 		done < '$(1)' && \
 		\
-		$(BUILDSCRIPTS_DIR)/merge-scriptfiles -O '$(3)' "$${@}" && \
+		$(X_MERGE_SCRIPTFILES) -O '$(3)' "$${@}" && \
 		$(SHELL) -n '$(3)'; \
 	}
 endef

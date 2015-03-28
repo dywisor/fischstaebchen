@@ -14,7 +14,6 @@ OVERLAY_SETUP_ENV += RUN_METASH='$(RUN_METASH)'
 #OVERLAY_SETUP_ENV +=
 
 
-
 $(OVERLAY_O): FORCE | _basedep_clean
 	$(DODIR) -- \
 		$(OVERLAY_O) \
@@ -42,7 +41,7 @@ $(eval OVERLAY_$(1)_SRCDIR = $(OVERLAY_SRCDIR)/$(2))
 $(O)/.stamp_overlay_metascript_$(2): \
 	$(O)/.stamp_overlay_metascript_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(call f_copy_tree_ifexist,$$(<)/metascript,$(OVERLAY_O_METASCRIPTDIR))
+	$$(call f_copy_tree_ifexist,$$(<)/metascript,$(OVERLAY_O_METASCRIPTDIR))
 
 
 ifeq ($(X_STATIC_SHELL_FILES),1)
@@ -64,13 +63,13 @@ $(O)/.stamp_overlay_env_$(2): \
 $(O)/.stamp_overlay_functions_$(2): \
 	$(O)/.stamp_overlay_functions_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(call f_copy_tree_ifexist,$$(<)/static/functions,$(OVERLAY_O_FUNCTIONS_DIR)/src)
+	$$(call f_copy_tree_ifexist,$$(<)/static/functions,$(OVERLAY_O_FUNCTIONS_DIR)/src)
 	touch '$$(@)'
 
 $(O)/.stamp_overlay_hooks_$(2): \
 	$(O)/.stamp_overlay_hooks_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(call f_copy_tree_ifexist,$$(<)/static/hooks,$(OVERLAY_O_HOOKDIR))
+	$$(call f_copy_tree_ifexist,$$(<)/static/hooks,$(OVERLAY_O_HOOKDIR))
 	touch '$$(@)'
 
 else
@@ -79,9 +78,9 @@ $(O)/.stamp_overlay_env_$(2): \
 
 	set -e; \
 	if test -f '$$(<)/env.sh'; then \
-		$(RUN_METASH) \
-			-O '$(OVERLAY_O_ENVFILES_DIR)/src/$$(*).sh' \
-			'$$(<)/env.sh'; \
+		$$(call f_run_metash_convert_file,\
+			$$(<)/env.sh,\
+			$(OVERLAY_O_ENVFILES_DIR)/src/$$(*).sh); \
 	elif test -e '$$(<)/env.sh'; then \
 		false not-a-file; \
 	else \
@@ -93,28 +92,21 @@ $(O)/.stamp_overlay_env_$(2): \
 $(O)/.stamp_overlay_functions_$(2): \
 	$(O)/.stamp_overlay_functions_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
-	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
+	$$(call f_metash_do_build,\
+		$(OVERLAY_O_TMPROOT)/$$(*)/functions,\
+		$$(<)/functions,\
+		$(OVERLAY_O_FUNCTIONS_DIR)/src)
 
-	$(call f_run_metash_convert_dir_ifexist,\
-		$$(<)/functions,$(OVERLAY_O_TMPROOT)/$$(*)/functions)
-
-	find $(OVERLAY_O_TMPROOT)/$$(*)/functions -type f -name '*.sh' | \
-		xargs -n 1 $(SHELL) -n
-
-	$(call f_copy_tree,$(OVERLAY_O_TMPROOT)/$$(*)/functions,$(OVERLAY_O_FUNCTIONS_DIR)/src)
 	touch '$$(@)'
 
 $(O)/.stamp_overlay_hooks_$(2): \
 	$(O)/.stamp_overlay_hooks_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
-	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
+	$$(call f_metash_do_build,\
+		$(OVERLAY_O_TMPROOT)/$$(*)/hooks,\
+		$$(<)/hooks,\
+		$(OVERLAY_O_HOOKDIR))
 
-	$(call f_run_metash_convert_dir_ifexist,\
-		$$(<)/hooks,$(OVERLAY_O_TMPROOT)/$$(*)/hooks)
-
-	$(call f_copy_tree,$(OVERLAY_O_TMPROOT)/$$(*)/hooks,$(OVERLAY_O_HOOKDIR))
 	touch '$$(@)'
 
 endif
@@ -142,7 +134,7 @@ $(O)/.stamp_overlay_$(2): \
 	}
 
 	if test -d '$$(<)/fakeroot-setup'; then \
-		$(call f_copy_tree,$$(<)/fakeroot-setup,$(OVERLAY_O_FAKEROOTD)); \
+		$$(call f_copy_tree,$$(<)/fakeroot-setup,$(OVERLAY_O_FAKEROOTD)); \
 		\
 	elif test -f '$$(<)/fakeroot-setup'; then \
 		$(DOINS) -- '$$(<)/fakeroot-setup' '$(OVERLAY_O_FAKEROOTD)/$$(*)'; \

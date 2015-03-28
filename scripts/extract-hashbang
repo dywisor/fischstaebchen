@@ -1,0 +1,18 @@
+#!/usr/bin/awk -f
+
+/^[#][!]/ {
+   sub("^[#][!]\\s*","",$0);
+   sub("\\s[-].*$","",$0);
+   sub("^.*[/]","",$0);
+
+   split($0,a);
+   n = length(a);
+
+   if (n) { print a[n]; }
+   exit;
+}
+
+# skip empty / comment lines if we haven't seen a code line so far
+{ m=1; }
+/^\s*([#]?.*)\s*$/ { m=0; }
+(m) { print; exit; }
