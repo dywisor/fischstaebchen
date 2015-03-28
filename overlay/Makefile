@@ -24,6 +24,7 @@ include $(__PRJROOT)/mk/vars.mk
 include $(__PRJROOT)/mk/install.mk
 include $(__PRJROOT)/mk/util.mk
 include $(__PRJROOT)/mk/build_scripts.mk
+include $(__PRJROOT)/mk/shellgen.mk
 
 include $(S)/mk/vars.mk
 include $(S)/mk/overlay_def.mk
