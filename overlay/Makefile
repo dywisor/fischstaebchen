@@ -49,6 +49,27 @@ clean:
 	test -n '$(O)' && test '$(O)' != '$(S)'
 	test ! -d '$(O)' || rm -r -- $(O)
 
+PHONY += shellcheck
+shellcheck:
+	test -d '$(OVERLAY_O_INITDIR)'
+	test -f '$(OVERLAY_O_FUNCTIONS_FILE)'
+	test -f '$(OVERLAY_O_ENVFILE_FILE)'
+
+	{ \
+		set -e; \
+		\
+		test ! -s '$(OVERLAY_O_WANTSED).abspath' || \
+			printf  '%s\n' '$(OVERLAY_O_WANTSED).abspath' && \
+		\
+		printf  '%s\n' '$(OVERLAY_O_FUNCTIONS_FILE)' && \
+		printf  '%s\n' '$(OVERLAY_O_ENVFILE_FILE)' && \
+		\
+		find '$(OVERLAY_O_HOOKDIR)/' -maxdepth 1 -type f && \
+		find '$(OVERLAY_O_HOOKDIR)/' -mindepth 2 -type f \
+			\( -name '*.sh' -or -name '*.bootstrap' -or -name '*.setup' \) ; \
+	} | sort -u | xargs $(X_SHELLCHECK)
+
+
 PHONY += _install_sanity_check
 _install_sanity_check:
 	test -n '$(DESTDIR:/=)' ## DESTDIR must be set and not '/'

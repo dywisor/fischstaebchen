@@ -1,0 +1,26 @@
+#!/bin/sh
+if [ -z "${X_SHELLCHECK:=$(which shellcheck 2>/dev/null)}" ]; then
+   printf '%s\n' "shellcheck not found!" 1>&2
+   exit 222
+fi
+
+excludes="
+SC1008
+SC2034
+SC2086
+"
+
+exv=
+for ex in ${excludes}; do
+   case "${ex}" in
+      ''|'#'*) : ;;
+      *) exv="${exv:+${exv},}${ex}" ;;
+   esac
+done
+
+
+set -- --shell=sh "${@}"
+[ -z "${exv}" ] || set -- "--exclude=${exv}" "${@}"
+
+exec "${X_SHELLCHECK}" "${@}"
+

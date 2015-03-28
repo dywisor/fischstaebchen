@@ -142,7 +142,17 @@ $(O)/.stamp_overlay_$(2): \
 		$(O)/.stamp_overlay_env_$(2) | _basedep_clean
 
 
-	$(call f_copy_tree_ifexist,$$(<)/rootfs,$(OVERLAY_O))
+	$$(call f_copy_tree_ifexist,$$(<)/rootfs,$(OVERLAY_O))
+
+	{ \
+		set -e; \
+		set -- \
+			$$(foreach p,$$(wildcard $$(<)/rootfs/bin/*),$$(p:$$(<)/rootfs/%=/%)) \
+		; \
+		while [ $$$${#} -gt 0 ]; do \
+			printf '%s\n' "$$$${1}"; shift; \
+		done >> '$(OVERLAY_O_WANTSED)'; \
+	}
 
 	if test -d '$$(<)/fakeroot-setup'; then \
 		$(call f_copy_tree,$$(<)/fakeroot-setup,$(OVERLAY_O_FAKEROOTD)); \

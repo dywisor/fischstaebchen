@@ -69,6 +69,7 @@ overlay: \
 		printf  '%s\n' '$(OVERLAY_O_FUNCTIONS_FILE)'; \
 	} >> '$(OVERLAY_O_WANTSED).append'
 
+	# FIXME: useless || should want-sed these files elsewhere
 	set -e; for f in $(addprefix $(OVERLAY_O),\
 		/telinit \
 		/etc/udhcpc.script \
