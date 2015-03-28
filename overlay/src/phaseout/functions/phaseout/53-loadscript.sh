@@ -31,7 +31,7 @@ __phaseout_run_hook_dispatch() {
    esac
 
    <%%locals __FILE__ __FNAME__ __NAME__ __DIR__  %>
-   __loadscript_simple_set_file_vars "${1:?}" && shift || return ${?}
+   __loadscript_simple_set_file_vars "${1:?}" || return ${?}
 
    <%%locals !\
       | __FAILFILE__=${PHASEOUT_HOOK_SYNCDIR_PENDING}/${__NAME__} !\
