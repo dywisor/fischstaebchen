@@ -35,7 +35,7 @@ __phaseout_run_hook_dispatch() {
 
    <%%locals !\
       | __FAILFILE__=${PHASEOUT_HOOK_SYNCDIR_PENDING}/${__NAME__} !\
-      | __GRP__=${NAME%%-*} !\
+      | __GRP__=${__NAME__%%-*} !\
       | __GRPSYNCDIR__=${PHASEOUT_HOOK_SYNCDIR_GRP}/${__GRP__} !\
       | __phaseout_tmpdir=${__GRPSYNCDIR__}/${__NAME__} !\
    %>
