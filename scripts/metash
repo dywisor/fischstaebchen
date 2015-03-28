@@ -2209,7 +2209,7 @@ def get_argparser():
 
    parser.add_argument (
       '--mode', metavar='<mode>', dest='mode', default=None,
-      choices=[ 'edit', 'multi-edit', 'list' ]
+      choices=[ 'edit', 'multi-edit', 'list', 'query' ]
    )
 
    add_mode_arg = lambda shortopt, longopt, mode_name, **kw: (
@@ -2223,6 +2223,7 @@ def get_argparser():
    add_mode_arg ( '-E', '--edit',       'edit' )
    add_mode_arg ( '-L', '--list',       'list' )
    add_mode_arg ( '-M', '--multi-edit', 'multi-edit' )
+   add_mode_arg ( '-Q', '--query',      'query' )
 
    return parser
 
@@ -2463,6 +2464,22 @@ def main():
 
       print('\n'.join(sorted(metavars)))
 
+   elif mode == 'query':
+      any_missing = False
+      lines = []
+
+      for varname in argv_config.infiles:
+         try:
+            value = metavars_dict [varname]
+         except KeyError:
+            any_missing=True
+            lines.append ( _unicode("") )
+         else:
+            lines.append ( _unicode(value) )
+      # --
+
+      print('\n'.join(lines))
+      return not any_missing
 
    else:
       return os.EX_SOFTWARE
