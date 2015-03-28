@@ -5,6 +5,8 @@
 ##
 
 phaseout_run() {
+   veinfo "phaseout_run(): $*" ## FIXME DEBUG PRINT
+
    _phaseout_run "${@}" && \
    _phaseout_waitfor_hooks && \
    _phaseout_get_and_report_failed

@@ -66,6 +66,11 @@ _phaseout_run() {
       [ -n "${keep_going}" ] && ignore_missing=fail || ignore_missing=error
    fi
 
+   if __debug__; then
+      veinfo "phaseout_run(): keep_going=${keep_going}"
+      veinfo "phaseout_run(): ignore_missing=${ignore_missing}"
+   fi
+
    failcode=0
    while [ ${#} -gt 0 ]; do
       if __phaseout_run_hook_dispatch "${1}" "${ignore_missing}"; then
