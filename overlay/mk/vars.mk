@@ -1,7 +1,7 @@
 X_METASH = $(BUILDSCRIPTS_DIR)/metash
-METASH_VDEF_OPTS  = -F $(S)/misc/metash_vdef
+METASH_VDEF_OPTS  = -F '$(__PRJROOT)/misc/metash_vdef'
 ifneq ($(OVERLAY_DEFAULTS_FILE),)
-METASH_VDEF_OPTS += -F $(OVERLAY_DEFAULTS_FILE)
+METASH_VDEF_OPTS += -F '$(OVERLAY_DEFAULTS_FILE)'
 endif
 
 
