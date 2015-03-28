@@ -852,7 +852,7 @@ union mount
 The ``squashed_usr``, ``var``, ``etc`` and ``volatile_rootfs``
 cmdline parameters accept a number of comma-separated arguments:
 
-   <file uri>, file=<file uri>
+   <file uri>, base=<file uri>
       Base squashfs file.
 
    auto
