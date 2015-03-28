@@ -93,8 +93,6 @@ $(O)/.stamp_overlay_env_$(2): \
 $(O)/.stamp_overlay_functions_$(2): \
 	$(O)/.stamp_overlay_functions_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
 
-	$(call f_copy_tree_ifexist,$$(<)/functions,$(OVERLAY_O_FUNCTIONS_DIR)/src)
-
 	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
 	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/functions'
 
@@ -109,8 +107,6 @@ $(O)/.stamp_overlay_functions_$(2): \
 
 $(O)/.stamp_overlay_hooks_$(2): \
 	$(O)/.stamp_overlay_hooks_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
-
-	$(call f_copy_tree_ifexist,$$(<)/static/hooks,$(OVERLAY_O_HOOKDIR))
 
 	$(RMF) -r -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
 	$(MKDIRP) -- '$(OVERLAY_O_TMPROOT)/$$(*)/hooks'
