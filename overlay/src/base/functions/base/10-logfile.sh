@@ -4,8 +4,8 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-## ~int logfile_printf ( ..., **INITRAMFS_LOGFILE )
-## ~int logfile_write ( message, header )
+## ~int initramfs_logfile_printf ( ..., **INITRAMFS_LOGFILE )
+## ~int initramfs_logfile_write ( message, header )
 ##
 ##  The logfile has to be created by /init
 ##   (obviously misbehaves if any hook deletes $INITRAMFS_LOGFILE)
@@ -13,33 +13,33 @@
 
 <% if DYNAMIC_LOGFILE_FUNCTIONS=0 %>
 # shellcheck disable=SC2059
-logfile_printf() {
+initramfs_logfile_printf() {
    [ ! -f "${INITRAMFS_LOGFILE:-/}" ] || \
    printf "${@}" >> "${INITRAMFS_LOGFILE}"
 }
 
-logfile_write() {
-   logfile_printf "%s%s%s\n" \
+initramfs_logfile_write() {
+   initramfs_logfile_printf "%s%s%s\n" \
       "[hooks:${PHASE:-???}]" "${2:+ ${2}:}" "${1:+ ${1}}"
 }
 
-MESSAGE_LOG_FUNC=logfile_write
+MESSAGE_LOG_FUNC=initramfs_logfile_write
 
 <% else %>
 if [ -f "${INITRAMFS_LOGFILE:-/}" ]; then
 # shellcheck disable=SC2059
-logfile_printf() { printf "${@}" >> "${INITRAMFS_LOGFILE}"; }
+initramfs_logfile_printf() { printf "${@}" >> "${INITRAMFS_LOGFILE}"; }
 
-logfile_write() {
-   logfile_printf "%s%s%s\n" \
+initramfs_logfile_write() {
+   initramfs_logfile_printf "%s%s%s\n" \
       "[hooks:${PHASE:-???}]" "${2:+ ${2}:}" "${1:+ ${1}}"
 }
 
-MESSAGE_LOG_FUNC=logfile_write
+MESSAGE_LOG_FUNC=initramfs_logfile_write
 
 else
-logfile_printf() { return 0; }
-logfile_write()  { return 0; }
+initramfs_logfile_printf() { return 0; }
+initramfs_logfile_write()  { return 0; }
 
 MESSAGE_LOG_FUNC=true
 fi
