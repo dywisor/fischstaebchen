@@ -5,7 +5,7 @@
 ##
 
 retlatch() {
-   if "$@"; then
+   if "${@}"; then
       rc=0
       return 1
    else

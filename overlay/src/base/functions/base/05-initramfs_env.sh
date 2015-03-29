@@ -4,6 +4,8 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
+CHECK_DIR_WRITABLE_FILE=".__initramfs_check_rw__"
+
 . "@@ENVFILE@@" || exit
 
 if [ -f "${IENV:-/}" ]; then

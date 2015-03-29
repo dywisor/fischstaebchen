@@ -4,23 +4,6 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-io_first_whitespace_field() { sed -r -e 's,\s+.*$,,'; }
-
-yesno() {
-   case "${1-}" in
-      [yY]|\
-      1|\
-      [yY][eE][sS]|\
-      [tT][rR][uU][eE]|\
-      [oO][nN]|\
-      [eE][nN][aA][bB][lL][eE][dD])
-         return 0
-      ;;
-   esac
-
-   return 1
-}
-
 ## @setf void get_regex_or_expr ( *wordlist, **expr! )
 get_regex_or_expr() {
    expr=

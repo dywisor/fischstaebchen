@@ -34,10 +34,6 @@ get_any_file_from() {
    return 1
 }
 
-newroot_get_any_file() {
-   get_any_file_from "${NEWROOT}" "$@"
-}
-
 get_any_file_oldnew_from() {
    <%%retvars oldnew_match_base oldnew_match_suffix %>
    <%%locals root<=${1?} root=${root%/} suffix %>
@@ -57,8 +53,4 @@ get_any_file_oldnew_from() {
    done
 
    return 1
-}
-
-newroot_get_any_file_oldnew() {
-   get_any_file_oldnew_from "${NEWROOT}" "$@"
 }

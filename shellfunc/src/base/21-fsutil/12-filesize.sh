@@ -27,9 +27,3 @@ get_filesize_m() {
    numfiles=0
    <%%argc_loop ::: _get_filesize_m "${1}" || die "failed to stat ${1}" %>
 }
-
-newroot_get_filesize_m() {
-   numfiles=0
-   <%%argc_loop ::: _get_filesize_m "${NEWROOT}/${1#/}" || !\
-      | die "failed to stat ${NEWROOT}/${1#/}" %>
-}

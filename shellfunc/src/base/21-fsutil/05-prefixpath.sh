@@ -40,10 +40,3 @@ prefix_fspath_recursive() {
 
    <%%argc_loop +++ prefix_fspath "${v0}" "${1}" %>
 }
-
-## int newroot_prefix_fspath ( prefix..., fspath, **v0! )
-##  IS prefix_fspath_recursive ( NEWROOT, prefix..., fspath )
-##
-newroot_prefix_fspath() {
-   prefix_fspath_recursive "${NEWROOT%/}" "${@}"
-}

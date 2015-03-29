@@ -5,7 +5,7 @@
 ##
 
 check_dir_writable() {
-   if __quietly__ touch "${1}/.__initramfs_check_rw__"; then
+   if __quietly__ touch "${1}/${CHECK_DIR_WRITABLE_FILE:-__check_rw__}"; then
       rm -f -- "${1}/.__initramfs_check_rw__"
       return 0
    fi
