@@ -22,6 +22,9 @@ logfile_write() {
    logfile_printf "%s%s%s\n" \
       "[hooks:${PHASE:-???}]" "${2:+ ${2}:}" "${1:+ ${1}}"
 }
+
+MESSAGE_LOG_FUNC=logfile_write
+
 <% else %>
 if [ -f "${INITRAMFS_LOGFILE:-/}" ]; then
 # shellcheck disable=SC2059
@@ -31,8 +34,13 @@ logfile_write() {
    logfile_printf "%s%s%s\n" \
       "[hooks:${PHASE:-???}]" "${2:+ ${2}:}" "${1:+ ${1}}"
 }
+
+MESSAGE_LOG_FUNC=logfile_write
+
 else
 logfile_printf() { return 0; }
 logfile_write()  { return 0; }
+
+MESSAGE_LOG_FUNC=true
 fi
 <% endif %>

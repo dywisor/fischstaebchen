@@ -9,7 +9,8 @@
 ## )
 ##
 __message_emitter() {
-   logfile_write "${4}" "${2}"
+   # FIXME: logfile_write() not migrated yet
+   ${MESSAGE_LOG_FUNC:-true} "${4}" "${2}"
 
    if [ -n "${5-X}" ]; then
       printf "%s%s%s%s${1-}" \
