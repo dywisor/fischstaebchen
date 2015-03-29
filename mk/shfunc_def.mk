@@ -1,2 +1,5 @@
+ifeq ($(SHFUNC_LIBDIR),)
 SHFUNC_LIBDIR = $(SHAREDIR)/fischstaebchen/shfunc
+endif
+
 METASH_OPTS += -V "SHFUNC_LIBDIR=$(SHFUNC_LIBDIR)"

@@ -25,6 +25,8 @@ WITH_BROKEN ?= 0
 
 __PRJROOT = $(abspath $(S)/..)
 
+SHFUNC_LIBDIR = /lib/shfunc
+
 include $(__PRJROOT)/mk/vars.mk
 include $(__PRJROOT)/mk/install.mk
 include $(__PRJROOT)/mk/util.mk
@@ -34,6 +36,7 @@ include $(S)/mk/_init_defs.mk
 include $(S)/mk/_build_defs.mk
 include $(S)/mk/_init_tool_def.mk
 
+include $(S)/mk/shfunc.mk
 include $(S)/mk/overlay.mk
 include $(S)/mk/busybox.mk
 include $(S)/mk/init.mk
