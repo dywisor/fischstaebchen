@@ -12,6 +12,7 @@ env:
       - S=init
       - S=overlay
       - S=standalone
+      - S=shellfunc
 
 script:
    -  cd ${S##*-};
