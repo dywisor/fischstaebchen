@@ -4,8 +4,8 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-## do not use the functions by this file directly,
-## rely on DBGTRACE, DBGTRACE_FUNC, DBGTRACE_CMD instead.
+## do not use the functions provided by this file directly,
+## use DBGTRACE, DBGTRACE_FUNC, DBGTRACE_CMD instead.
 ##
 <%if DBGTRACE %>
 
