@@ -37,3 +37,5 @@ die() {
    ${DIE_FUNCTION:-@@_DIEFUNC@@} "${@}"
 }
 <% endif %>
+
+die_usage() { die "${1-}" "${2:-@@EX_USAGE@@}"; }
