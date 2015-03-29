@@ -9,6 +9,47 @@ OVERLAY_FUNCTIONS_ORDER += newroot_hooks
 OVERLAY_FUNCTIONS_ORDER += stagedive
 OVERLAY_FUNCTIONS_ORDER += dotfiles
 
+# _f_combine_script_file_dirs ( srcroot, dstdir )
+#
+#   srcroot/<name>/<files> => dstdir/<name>.sh
+#
+define _f_combine_script_file_dirs
+	# scan for files not supported (yet?)
+	! { find '$(1)/' -type f -not -name '.stamp*' -name '*.in' | grep -- .; }
+
+	$(MKDIRP) -- '$(2)'
+
+	# create per-directory functions files
+	{ \
+		set -e; \
+		D='$(2)'; \
+		\
+		for src in '$(1)/'*; do \
+			if test -e "$${src}"; then \
+				name="$${src##*/}"; \
+				\
+				case "$${name}" in \
+					.stamp*) continue ;; \
+				esac; \
+				\
+				if test -h "$${src}" || test ! -d "$${src}"; then \
+					printf  "%s\n"  "Cannot handle non-dir $${name} ($${src})!"; \
+					exit 9; \
+				else \
+					$(call f_combine_script_file_dir,$${src}/,$${D}/$${name}.sh); \
+				fi; \
+			fi; \
+		done; \
+	}
+endef
+
+# f_combine_script_file_dirs(...)
+define f_combine_script_file_dirs
+	$(call _f_combine_script_file_dirs,$(strip $(1)),$(strip $(2)))
+endef
+
+
+
 $(OVERLAY_O_TMPROOT)/include_order: \
 	$(OVERLAY_O) FORCE | $(_ALL_OVERLAY_TARGETS) _basedep_clean
 
@@ -65,7 +106,7 @@ PHONY += _gen_functions_combine
 _gen_functions_combine: \
 	$(OVERLAY_O) _gen_functions_clean FORCE | $(_ALL_OVERLAY_TARGETS) _basedep_clean
 
-	$(call f_combine_script_files,\
+	$(call f_combine_script_file_dirs,\
 		$(OVERLAY_O_FUNCTIONS_DIR)/src,\
 		$(OVERLAY_O_FUNCTIONS_DIR)/combined)
 
@@ -88,8 +129,7 @@ define _INCLUDE_FILES_FROM
 			fi; \
 		done < '$(1)' && \
 		\
-		$(X_MERGE_SCRIPTFILES) -O '$(3)' "$${@}" && \
-		$(SHELL) -n '$(3)'; \
+		$(call f_combine_script_files,"$${@}",$(3)); \
 	}
 endef
 

@@ -66,39 +66,14 @@ define f_metash_do_build
 	$(call _f_metash_do_build,$(strip $(1)),$(strip $(2)),$(strip $(3)))
 endef
 
-# _f_combine_script_files ( srcroot, dstdir )
-#
-#   srcroot/<name>/<files> => dstdir/<name>.sh
-#
-define _f_combine_script_files
-	# scan for files not supported (yet?)
-	! { find '$(1)/' -type f -name '*.in' | grep -- .; }
-
-	$(MKDIRP) -- '$(2)'
-
-	# create per-directory functions files
-	{ \
-		set -e; \
-		D='$(2)'; \
-		\
-		for src in '$(1)/'*; do \
-			if test -e "$${src}"; then \
-				name="$${src##*/}"; \
-				\
-				if test -h "$${src}" || test ! -d "$${src}"; then \
-					printf  "%s\n"  "Cannot handle non-dir $${name} ($${src})!"; \
-					exit 9; \
-				else \
-					$(X_MERGE_SCRIPTFILES) \
-						-O "$${D}/$${name}.sh" \
-						$$( find "$${src}/" -type f -name '*.sh' | sort -V ); \
-				fi; \
-			fi; \
-		done; \
-	}
+# f_combine_script_files ( srcfiles, dstfile )
+define f_combine_script_files
+	$(X_MERGE_SCRIPTFILES) -O $(2).new $(1) && \
+	$(SHELL) -n $(2).new && \
+	$(MVF) -- $(2).new $(2)
 endef
 
-# f_combine_script_files(...)
-define f_combine_script_files
-	$(call _f_combine_script_files,$(strip $(1)),$(strip $(2)))
+# f_combine_script_file_dir ( srcdir, dstfile )
+define f_combine_script_file_dir
+	$(call f_combine_script_files,$$(find $(1) -type f -not -name '.stamp*' -name '*.sh' | sort -V ),$(2))
 endef

@@ -10,8 +10,6 @@ EXEMODE ?= 0755
 INSMODE ?= 0644
 DIRMODE ?= 0755
 
-RMF      = $(RM) -f
-MKDIRP   = $(MKDIR) -p
 DODIR    = $(INSTALL) -d -m $(DIRMODE)
 DOEXE    = $(INSTALL) -D -m $(EXEMODE)
 DOINS    = $(INSTALL) -D -m $(INSMODE)
