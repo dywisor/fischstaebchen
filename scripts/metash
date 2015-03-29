@@ -1795,6 +1795,54 @@ class ShellMacros ( object ):
    #def expand_vall
    #def expand_vany
 
+   def _expand_set_argv (
+      self, l_append, r_append,
+      builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
+      setf = True
+      if args_tuple[0] in { "-f", "--setf", "--" }:
+         #setf = True
+         set_argv = args_tuple[1]
+      elif args_tuple[0] in { "+f", "--no-setf" }:
+         setf = False
+         set_argv = args_tuple[1]
+      else:
+         set_argv = args_str
+
+      _vformat = self.STR_VFORMAT
+
+      set_argv = _vformat (
+         "{1}{0}{2}",
+         (
+            (set_argv or ''),
+            ( (l_append + ' ') if l_append else '' ),
+            ( (' ' + r_append) if r_append else '' )
+         ),
+         {}
+      )
+
+      if set_argv:
+         yield _vformat ( '{I}# shellcheck disable=SC2048', (), fmt_vars )
+
+         if setf:
+            yield _vformat (
+               '{I}{{ set -f; set -- {0}; set +f; }}', ( set_argv, ), fmt_vars
+            )
+         else:
+            yield _vformat ( '{I}set -- {0}', ( set_argv, ), fmt_vars )
+      else:
+         yield _vformat ( '{I}set --', (), fmt_vars )
+   # --- end of _expand_set_argv (...) ---
+
+   def expand_set_argv ( self, *args, **kwargs ):
+      return self._expand_set_argv ( None, None, *args, **kwargs )
+
+   def expand_push_argv ( self, *args, **kwargs ):
+      return self._expand_set_argv ( "\"${@}\"", None, *args, **kwargs )
+
+   def expand_append_argv ( self, *args, **kwargs ):
+      return self._expand_set_argv ( None, "\"${@}\"", *args, **kwargs )
+
 
 class MetavarShellFileReader ( MetavarFileReader ):
 
