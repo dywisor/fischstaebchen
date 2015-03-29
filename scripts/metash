@@ -41,6 +41,48 @@ def get_dec_int_digit_len ( n ):
       return int ( math.log10 ( -n ) ) + 2
 
 
+class _MessageWriter ( object ):
+
+   @classmethod
+   def _write ( cls, write_outstream, color, msg, append_newline=True ):
+      raise NotImplementedError()
+
+   @classmethod
+   def write_err ( cls, msg, **kw ):
+      return cls._write ( sys.stderr.write, "red", msg, **kw )
+
+class ColoredOutput ( _MessageWriter ):
+
+   COLORS = {
+      "green"  : "1;32m",
+      "yellow" : "1;33m",
+      "red"    : "1;31m"
+   }
+
+   @classmethod
+   def _write ( cls, write_outstream, color, msg, append_newline=True ):
+      write_outstream (
+         "\033[{cl}{msg}\033[0m{nl}".format (
+            cl  = cls.COLORS[color],
+            msg = msg,
+            nl  = (os.linesep if append_newline else "")
+         )
+      )
+
+# --- end of ColoredOutput ---
+
+class NoColorOutput ( _MessageWriter ):
+
+   @classmethod
+   def _write ( cls, write_outstream, color, msg, append_newline=True ):
+      write_outstream (
+         "{msg}{nl}".format (
+            msg = msg,
+            nl  = (os.linesep if append_newline else "")
+         )
+      )
+# --- end of NoColorOutput ---
+
 class UndefinedValueError ( ValueError ):
    pass
 
@@ -483,9 +525,11 @@ class MetavarFileReader ( FileReader ):
    DEFAULT_SUFFIX_PATTERN = True
 
    def __init__ ( self,
+      msg_writer,
       metavar_name=None, metavar_prefix=None, metavar_suffix=None
    ):
       super ( MetavarFileReader, self ).__init__()
+      self.msg_writer     = msg_writer
       self.metavar_name   = metavar_name    or self.DEFAULT_NAME_PATTERN
       self.metavar_prefix = metavar_prefix  or self.DEFAULT_PREFIX_PATTERN
       self.metavar_suffix = metavar_suffix  or self.DEFAULT_SUFFIX_PATTERN
@@ -710,14 +754,14 @@ class MetavarFileReader ( FileReader ):
             missing = line_obj.assign_from ( visible_metavars )
 
             if missing:
-               ewrite   = sys.stderr.write
+               ewrite   = self.msg_writer.write_err
                colwidth = get_dec_int_digit_len ( len(input_line) )
 
                for metavar_ref in missing:
                   ewrite (
                      (
                         '{filepath}: line {lino:d}: column {col:>{l}d}: '
-                        'metavar not defined: {name}\n'
+                        'metavar not defined: {name}'
                      ).format (
                         filepath = (filepath or '???'),
                         lino     = lino,
@@ -727,7 +771,7 @@ class MetavarFileReader ( FileReader ):
                      )
                   )
 
-               ewrite ( '>>> ' + input_line + '\n' )
+               ewrite ( '>>> ' + input_line )
 
                if '\t' not in input_line:  # and $others not in input_line
                   for metavar_ref in missing:
@@ -735,7 +779,7 @@ class MetavarFileReader ( FileReader ):
                         '>>> '
                         + (metavar_ref.pos[0] * ' ') + '^'
                         + ((metavar_ref.pos[1] - metavar_ref.pos[0] - 2) * '~')
-                        + '^\n'
+                        + '^'
                      )
                # --
 
@@ -2273,6 +2317,15 @@ def get_argparser():
    add_mode_arg ( '-M', '--multi-edit', 'multi-edit' )
    add_mode_arg ( '-Q', '--query',      'query' )
 
+   parser.add_argument (
+      "--color", "-C", dest="colored_output",
+      default=False, action="store_true",
+   )
+   parser.add_argument (
+      "--no-color", dest="colored_output",
+      default=argparse.SUPPRESS, action="store_false"
+   )
+
    return parser
 
 
@@ -2463,8 +2516,9 @@ def main():
    argv_config     = parser.parse_args()
    config          = {}
    mode            = argv_config.mode
-
-   reader          = MetavarShellFileReader()
+   reader          = MetavarShellFileReader (
+      ( ColoredOutput if argv_config.colored_output else  NoColorOutput )
+   )
    reader.add_default_builtins ( config )
 
    metavars_dict   = VarsDict()
