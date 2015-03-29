@@ -5,6 +5,7 @@ BINDIR      = $(EXEC_PREFIX:/=)/bin
 SBINDIR     = $(EXEC_PREFIX:/=)/sbin
 LIBDIR_NAME = lib
 LIBDIR      = $(EXEC_PREFIX:/=)/$(LIBDIR_NAME)
+SHAREDIR    = $(PREFIX:/=)/share
 
 EXEMODE ?= 0755
 INSMODE ?= 0644

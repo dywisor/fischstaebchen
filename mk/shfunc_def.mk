@@ -1,0 +1,2 @@
+SHFUNC_LIBDIR = $(SHAREDIR)/fischstaebchen/shfunc
+METASH_OPTS += -V "SHFUNC_LIBDIR=$(SHFUNC_LIBDIR)"

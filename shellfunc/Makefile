@@ -12,12 +12,11 @@ include $(__PRJROOT)/mk/install.mk
 include $(__PRJROOT)/mk/util.mk
 include $(__PRJROOT)/mk/build_scripts.mk
 include $(__PRJROOT)/mk/shellgen.mk
+include $(__PRJROOT)/mk/shfunc_def.mk
 
 include $(S)/mk/funcfiles.mk
 
-
 FUNCTIONS = base
-
 
 PHONY += clean
 clean:
@@ -27,7 +26,7 @@ clean:
 
 PHONY += shellcheck
 shellcheck:
-	false
+	$(call f_run_shell_syntax_check_recursive,$(FUNCTIONS_O))
 
 
 PHONY += functions
@@ -37,8 +36,8 @@ functions: \
 
 PHONY += install
 install:
-	$(DODIR) -- '$(DESTDIR)'
-	$(call f_copy_tree,$(FUNCTIONS_O),$(DESTDIR)$(____________))
+	$(DODIR) -- '$(DESTDIR)$(SHFUNC_LIBDIR)'
+	$(call f_copy_tree,$(FUNCTIONS_O),$(DESTDIR)$(SHFUNC_LIBDIR))
 
 
 
