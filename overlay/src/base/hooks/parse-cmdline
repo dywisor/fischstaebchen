@@ -114,7 +114,7 @@ do_parse_cmdline() {
          *=*)
             key="${1%%=*}"
             value="${1#*=}"
-            have_value="${SHTRUE}"
+            have_value="y"
          ;;
          *)
             key="${1}"

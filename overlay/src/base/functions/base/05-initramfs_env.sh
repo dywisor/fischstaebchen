@@ -31,6 +31,6 @@ EERROR_COLOR="${MSG_COLOR_RED}"
 __DEFAULT_COLOR="${MSG_COLOR_DEFAULT}"
 fi
 
-__debug__()   { [ "${DEBUG:-X}"   = "${SHTRUE}" ]; }
-__verbose__() { [ "${VERBOSE:-X}" = "${SHTRUE}" ]; }
-__quiet__()   { [ "${QUIET:-X}"   = "${SHTRUE}" ]; }
+__debug__()   { [ "${DEBUG:-X}"   = "y" ]; }
+__verbose__() { [ "${VERBOSE:-X}" = "y" ]; }
+__quiet__()   { [ "${QUIET:-X}"   = "y" ]; }
