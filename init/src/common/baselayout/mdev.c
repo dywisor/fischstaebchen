@@ -20,6 +20,7 @@
 #include "../fs/touch.h"
 #include "../fs/fileio.h"
 #include "../misc/run_command.h"
+#include "../strutil/compare.h"
 
 static int _do_fs_setup_mdev (
    const char* const mdev_dir,
@@ -46,11 +47,12 @@ int setup_mdev (void) {
 static int register_hotplug_agent ( const char* const path ) {
    printf_debug (
       NULL, "Registering hotplug agent: %s", "\n",
-      ((path == NULL) ? "<none>" : path)
+      ( STR_IS_EMPTY(path) ? "<disable>" : path )
    );
 
    return write_sysfs_file (
-      GET_PROC_PATH("/sys/kernel/hotplug"), ((path == NULL) ? "" : path)
+      GET_PROC_PATH("/sys/kernel/hotplug"),
+      ( STR_IS_EMPTY(path) ? "\n" : path )
    );
 }
 
