@@ -16,4 +16,4 @@ fi
 # shellcheck disable=SC2119
 io_hash_fspath()  { io_strip_fspath | io_hash; }
 # shellcheck disable=SC2119
-hash_fspath()     { strip_fspath | io_hash; }
+hash_fspath()     { strip_fspath "${@}" | io_hash; }
