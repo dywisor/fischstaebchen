@@ -1441,7 +1441,8 @@ class ShellMacros ( object ):
       if not vprefix or vprefix == '_': vprefix = 'SCRIPT_'
 
       vsrc = args_tuple[1]
-      if not vsrc or vsrc == '_': vsrc = '${0:?}'
+      if not vsrc or vsrc == '_':
+         vsrc = '${BASH_SOURCE:-${0:?}}' if self.shell == 'bash' else '${0:?}'
 
       return self.vformat_lines (
          ( vprefix, vsrc ), fmt_vars,
