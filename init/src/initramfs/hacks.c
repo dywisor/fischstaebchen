@@ -169,6 +169,7 @@ const char* get_any_file_va ( const int mode, va_list vargs ) {
    return f;
 }
 
+/*
 const char* get_any_file ( const int mode, ... ) {
    const char* f;
    va_list vargs;
@@ -179,7 +180,7 @@ const char* get_any_file ( const int mode, ... ) {
 
    return f;
 }
-
+*/
 
 int _premount_essential ( const char* const root, ... ) {
    int ret;
