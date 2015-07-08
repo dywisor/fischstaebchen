@@ -29,6 +29,30 @@ const char* MSG_PREFIX      = NULL;
 int MSG_NOCOLOR             = 1;
 int MSG_INDENT_LEVEL        = 0;
 
+void message_set_defaults (void) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
+#if DEBUG_BUILD
+#pragma GCC diagnostic pop
+   MSG_DBGSTREAM    = stderr;
+#else
+   MSG_DBGSTREAM    = NULL;
+#endif
+   MSG_DEFSTREAM    = stdout;
+   MSG_ERRSTREAM    = stderr;
+   MSG_WARNSTREAM   = stderr;
+
+   MSG_COLOR__DBG   = MSG_GET_COLOR(MAGENTA_NB);
+   MSG_COLOR__DEF   = MSG_GET_COLOR(GREEN);
+   MSG_COLOR__ERR   = MSG_GET_COLOR(RED);
+   MSG_COLOR__WARN  = MSG_GET_COLOR(YELLOW);
+
+   MSG_PREFIX       = "*";
+
+   MSG_INDENT_LEVEL = 0;
+   MSG_NOCOLOR      = 0;
+}
+
 
 
 #define _MSG_PRINTF_FUNC_BODY(ref) \
