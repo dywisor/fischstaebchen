@@ -124,7 +124,7 @@ void message_vfprintf_color (
    va_list vargs
 );
 
-__attribute__((format (printf, 6, 8)))
+__attribute__((format (printf, 6, 0)))
 void message_fprintf_color (
    FILE* const stream,
    const char* const header_color,
@@ -136,25 +136,25 @@ void message_fprintf_color (
    ...
 );
 
-__attribute__((format (printf, 2, 4)))
+__attribute__((format (printf, 2, 0)))
 void printf_debug (
    const char* const header,
    const char* const fmt, const char* const fmt_end, ...
 );
 
-__attribute__((format (printf, 2, 4)))
+__attribute__((format (printf, 2, 0)))
 void printf_message (
    const char* const header,
    const char* const fmt, const char* const fmt_end, ...
 );
 
-__attribute__((format (printf, 2, 4)))
+__attribute__((format (printf, 2, 0)))
 void printf_error (
    const char* const header,
    const char* const fmt, const char* const fmt_end, ...
 );
 
-__attribute__((format (printf, 2, 4)))
+__attribute__((format (printf, 2, 0)))
 void printf_warning (
    const char* const header,
    const char* const fmt, const char* const fmt_end, ...
