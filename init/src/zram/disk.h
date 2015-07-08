@@ -28,6 +28,7 @@ int zram_disk_config_init (
 
 void zram_disk_config_free ( struct zram_disk_config* const p_zdisk );
 
+__attribute__((warn_unused_result))
 struct zram_disk_config* new_zram_disk_config ( const char* const name );
 
 int zram_disk_config_set_size_from_str (

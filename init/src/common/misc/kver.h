@@ -11,8 +11,10 @@
 #include <sys/utsname.h>
 
 /** Returns the kernel release str (from uname(2)). */
+__attribute__((warn_unused_result))
 char* get_kernel_release (void);
 
+__attribute__((warn_unused_result))
 char* get_kernel_release_from_uname (
    const struct utsname* const p_uinfo
 );

@@ -39,6 +39,7 @@ struct dynstr_data {
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynstr_data_init (
    struct dynstr_data* const pdata,
    const size_t initial_size
@@ -56,6 +57,7 @@ int dynstr_data_init (
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynstr_data_resize (
    struct dynstr_data* const pdata, const size_t min_size
 );
@@ -73,6 +75,7 @@ int dynstr_data_resize (
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynstr_data_grow (
    struct dynstr_data* const pdata, const size_t num_items
 );

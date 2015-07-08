@@ -99,6 +99,7 @@ int zram_tmpfs_config_parse (
    const mode_t default_mode
 );
 
+__attribute__((warn_unused_result))
 struct zram_tmpfs_config* new_zram_tmpfs_config (
    const char* const name,
    const char* const mp,

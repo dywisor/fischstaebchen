@@ -109,6 +109,9 @@ int basemounts_mount_devfs_pts (const char* const mp) {
 }
 
 static int _do_basemounts_all (void) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+
 #define BASEMOUNTS__PRINT_MOUNT(mp)  \
    message_fprintf_fmt_str(MSG_DEFSTREAM,fmt_about_to_mount,mp)
 #define BASEMOUNTS__PRINT_FAIL(mp)   \
@@ -182,4 +185,6 @@ static int _do_basemounts_all (void) {
 
 #undef BASEMOUNTS__PRINT_FAIL
 #undef BASEMOUNTS__PRINT_MOUNT
+
+#pragma GCC diagnostic pop
 }

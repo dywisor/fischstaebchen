@@ -37,11 +37,14 @@ void initramfs_additional_env_exports (void);
 int initramfs_run_hook (
    const char* const phase, const int is_critical, int* const found_hook
 );
+
+__attribute__((warn_unused_result))
 char* initramfs_get_hook_file ( const char* const phase );
 
 const char* get_any_file_va ( const int mode, va_list vargs );
 const char* get_any_file    ( const int mode, ... );
 
+__attribute__((sentinel))
 int _premount_essential ( const char* const root, ... );
 #define premount_essential(...)   _premount_essential(__VA_ARGS__,NULL)
 

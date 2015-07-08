@@ -137,6 +137,7 @@ const char* domount_strerror ( const int mnterr );
  *
  * @return 0 on success, else -1
  */
+__attribute__((warn_unused_result))
 int mount_config_init (
    struct mount_config* const p_mount,
    const char* const  source,
@@ -160,6 +161,7 @@ int mount_config_init (
  *
  * @return 0 on success, else -1
  */
+__attribute__((warn_unused_result))
 int mount_config_ptr_init (
    struct mount_config** const pp_mount,
    const char* const  source,

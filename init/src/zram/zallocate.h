@@ -15,6 +15,7 @@
 int zram_claim_device    ( struct zram_dev_info* const p_dev );
 int zram_release_device  ( struct zram_dev_info* const p_dev, const int force );
 
+__attribute__((warn_unused_result))
 struct zram_dev_info* zram_claim_device_from_identifier (
    const uint8_t identifier, const size_t size_m
 );

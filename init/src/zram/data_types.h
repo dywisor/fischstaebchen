@@ -73,6 +73,7 @@ struct zram_dev_info {
 
 void zram_dev_info_free ( struct zram_dev_info* const p_dev );
 
+__attribute__((warn_unused_result))
 struct zram_dev_info* zram_dev_info_new_from_identifier (
    const uint8_t identifier
 );
@@ -83,9 +84,11 @@ void zram_dev_set_size_b (
    struct zram_dev_info* const p_dev, const size_t size_b
 );
 
+__attribute__((pure))
 const char* zram_get_comp_desc    ( const int algi );
 const char* zram_get_comp_desc_of ( const struct zram_dev_info* const p_dev );
 
+__attribute__((warn_unused_result))
 char* zram_get_zdisk_devpath ( const struct zram_dev_info* const p_dev );
 
 void zram_dev_info_set_fstype (

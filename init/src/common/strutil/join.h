@@ -21,6 +21,7 @@
  *
  * @return concatenated str or NULL on error
  */
+__attribute__((sentinel,warn_unused_result))
 char* _join_str ( const char* const seq, ... );
 #define join_str(seq,...)  _join_str(seq,__VA_ARGS__,NULL)
 
@@ -34,6 +35,7 @@ char* _join_str ( const char* const seq, ... );
  *
  * @return concatenated str or NULL on error
  */
+__attribute__((warn_unused_result))
 char* join_str_array (
    const char* const seq,
    const size_t arr_len,
@@ -49,6 +51,7 @@ char* join_str_array (
  *
  * @return concatenated str or NULL on error
  */
+__attribute__((warn_unused_result))
 char* join_str_dynarray (
    const char* const seq,
    const struct dynarray* const p_darr
@@ -62,6 +65,7 @@ char* join_str_dynarray (
  *
  * @return concatenated str; NULL on error or if both input strings were NULL
 */
+__attribute__((warn_unused_result))
 char* join_str_pair ( const char* const left, const char* const right );
 
 /**
@@ -73,6 +77,7 @@ char* join_str_pair ( const char* const left, const char* const right );
  *
  * @return concatenated str; NULL on error or if all input strings were NULL
  */
+__attribute__((warn_unused_result))
 char* join_str_triple (
    const char* const left, const char* const middle, const char* const right
 );

@@ -32,6 +32,7 @@ int zram_autoswap (
    const size_t sys_memsize_m
 );
 
+__attribute__((const))
 const char* zram_autoswap_guess_fractional ( const size_t sys_memsize_m );
 
 

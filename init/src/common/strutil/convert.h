@@ -47,6 +47,7 @@ void convert_to_uppercase ( char* const str );
  *
  * @return converted str or NULL
  */
+__attribute__((warn_unused_result))
 char* get_uppercase ( const char* const str );
 
 /**
@@ -63,6 +64,7 @@ void convert_to_lowercase ( char* const str );
  *
  * @return converted str or NULL
  */
+__attribute__((warn_unused_result))
 char* get_lowercase ( const char* const str );
 
 
@@ -73,6 +75,7 @@ char* get_lowercase ( const char* const str );
  *
  * @return converted str or NULL
  */
+__attribute__((warn_unused_result))
 char* uint8_to_str ( const uint8_t k );
 
 

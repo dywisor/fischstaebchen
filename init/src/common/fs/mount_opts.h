@@ -21,6 +21,7 @@
  *
  * @return  NULL on error, else opts str
  */
+__attribute__((warn_unused_result))
 char* get_mount_opts_str (
    const unsigned long flags,
    const char* const opts_in
@@ -84,6 +85,7 @@ int parse_tmpfs_size_spec (
  *
  * @return NULL on error, else "size=..." str
  */
+__attribute__((warn_unused_result))
 char* create_tmpfs_size_opt ( const size_t size_m );
 
 

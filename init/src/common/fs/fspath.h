@@ -20,6 +20,7 @@ struct fspath_info {
    const char* dirname;
 };
 
+__attribute__((warn_unused_result))
 char* fspath_strip ( const char* const path );
 
 void fspath_info_init ( struct fspath_info* const p_info, char* const path );

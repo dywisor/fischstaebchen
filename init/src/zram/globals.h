@@ -32,9 +32,13 @@ extern struct zram_globals_type* zram_globals;
 int  zram_init_globals (void);
 void zram_free_globals (void);
 
+__attribute__((warn_unused_result))
 char* get_zram_ident_str ( const uint8_t identifier );
+__attribute__((warn_unused_result))
 char* get_zram_name      ( const char* const ident_str );
+__attribute__((warn_unused_result))
 char* get_zram_path      ( const char* const ident_str );
+__attribute__((warn_unused_result))
 char* get_zram_devpath   ( const char* const ident_str );
 
 int get_zram_name_path_triple (

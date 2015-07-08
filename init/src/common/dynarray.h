@@ -43,6 +43,7 @@ struct dynarray {
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynarray_init ( struct dynarray* const p_darr, const size_t initial_size );
 
 /**
@@ -52,6 +53,7 @@ int dynarray_init ( struct dynarray* const p_darr, const size_t initial_size );
  *
  * @return pointer to dynarray or NULL
  */
+__attribute__((warn_unused_result))
 struct dynarray* new_dynarray ( const size_t initial_size );
 
 /**
@@ -73,6 +75,7 @@ void dynarray_set_data_readonly (
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynarray_resize ( struct dynarray* const p_darr, const size_t want_len );
 
 /**
@@ -83,6 +86,7 @@ int dynarray_resize ( struct dynarray* const p_darr, const size_t want_len );
  *
  * @return 0 on success, else non-zero
  */
+__attribute__((warn_unused_result))
 int dynarray_grow ( struct dynarray* const p_darr );
 
 /**
