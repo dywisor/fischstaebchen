@@ -17,6 +17,12 @@ IFS_DEFAULT="${IFS}"
 __parser_list=
 add_parser() { __parser_list="${__parser_list# } ${*}"; }
 
+add_parser_with_init() {
+   add_parser "${@}"
+   <%%argc_loop ::: autodie parse_${1:?}_init %>
+}
+
+
 for parser in "@@IHOOK@@/parse-cmdline.d/"*; do
    if [ -f "${parser}" ]; then
       . "${parser}" || die
@@ -42,6 +48,16 @@ check_is_keepval() {
       ''|none|keep|disable|_) return 0 ;;
    esac
    return 1
+}
+
+cmdline_value_bool_default_true() {
+   [ "${have_value:?}" = "y" ] || return 0
+   yesno "${value}"
+}
+
+cmdline_value_bool_default_false() {
+   [ "${have_value:?}" = "y" ] || return 1
+   yesno "${value}"
 }
 
 parse_remux_key() {

@@ -14,8 +14,11 @@ initramfs_kmod_dir=
 newroot_kmod_dir=
 
 want_xfer_kmod=
-if [ -z "${NEWROOT_MODULES_DIR-}" ]; then
-   eerror "cannot copy module files: NEWROOT_MODULES_DIR is not set."
+if ! ishare_has_flag want-xfer_kmod; then
+   veinfo "Not copying kernel module files: disabled."
+
+elif [ -z "${NEWROOT_MODULES_DIR-}" ]; then
+   eerror "Cannot copy module files: NEWROOT_MODULES_DIR is not set."
 
 elif kver="$(uname -r @@NO_STDERR@@)" && [ -n "${kver}" ]; then
    initramfs_kmod_dir="${initramfs_kmod_root}/${kver}"
@@ -26,19 +29,22 @@ elif kver="$(uname -r @@NO_STDERR@@)" && [ -n "${kver}" ]; then
       [ ! -d "${newroot_kmod_dir}" ]
    then
       want_xfer_kmod=y
-      einfo "found kernel modules"
+      einfo "Found kernel modules"
    fi
 fi
 
 want_xfer_fw=
-if [  -z "${NEWROOT_FIRMWARE_DIR-}" ]; then
-   eerror "cannot copy firmware files: NEWROOT_FIRMWARE_DIR is not set."
+if ! ishare_has_flag want-xfer_fw; then
+   veinfo "Not copying kernel firmware files: disabled."
+
+elif [ -z "${NEWROOT_FIRMWARE_DIR-}" ]; then
+   eerror "Cannot copy firmware files: NEWROOT_FIRMWARE_DIR is not set."
 
 elif \
    [ -d "${initramfs_fw_dir}" ] && \
    [ ! -d "${NEWROOT_FIRMWARE_DIR}" ]
 then
-   einfo "found kernel firmware files"
+   einfo "Found kernel firmware files"
    want_xfer_fw=y
 fi
 
@@ -65,5 +71,5 @@ if [ -n "${want_xfer_fw}${want_xfer_kmod}" ]; then
    # shellcheck disable=SC2015
    get_newroot_rw_nonfatal && \
    transfer_modules_and_firmware || \
-      eerror "failed to transfer kernel modules/firmware!"
+      eerror "Failed to transfer kernel modules/firmware!"
 fi

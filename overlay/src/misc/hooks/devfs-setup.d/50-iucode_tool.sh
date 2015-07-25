@@ -7,6 +7,12 @@
 <% weakdef IUCODE_TOOL /usr/sbin/iucode_tool %>
 <% if HAVE_IUCODE_TOOL %>
 
+if ! ishare_has_flag want-load-cpu-iucode; then
+   veinfo "Not loading CPU microcode - disabled."
+   return 0
+fi
+
+
 if have_kernel_module_loaded cpuid; then
    @@NOP@@
 
