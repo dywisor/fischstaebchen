@@ -362,6 +362,7 @@ filescan {-e|-f|-d|-b|-c} [--] <basepath> [<basepath>...] -- <suffix> [<suffix>.
 
    The mode flags ``-e, -f, -d, -b, -c`` may be used to restrict the
    file type (exists, file, dir, block dev, char dev).
+   The mode flags get *OR*\ed when more than one is specified.
    The default mode is ``-f``.
 
    The ``.`` suffix has the special meaning of "match basepath".
@@ -821,6 +822,51 @@ liram_<option>=...
    Ignored.
 
 
+
+.. _MISC CMDLINE PARAMETERS:
+
+----
+misc
+----
+
+cpu_iucode[=<bool>]
+   Enable or disable loading of CPU microcode.
+
+   Enabled by default, but nonfatal (errors are ignored by the boot process).
+   Provided by the ``misc`` hook overlay.
+
+no_cpu_iucode
+   Disable loading of CPU microcode.
+
+xfer_fw[=<bool>]
+   Enable or disable transferring of kernel firmware files from the initramfs
+   to the rootfs.
+
+   Enabled by default, but firmware files will only be copied if all of
+   the following conditions are met:
+
+   * ``/lib/firmware`` exists in the initramfs
+
+   * ``/lib/firmware`` does not exist in the rootfs
+
+   Which means that no files will be copied when booting a usual linux distro.
+
+   Provided by the ``misc`` hook overlay.
+
+xfer_kmod[=<bool>]
+   Enable or disable transferring of kernel module files from the initramfs
+   to the rootfs.
+
+   Enabled by default, but kernel modules will only be copied if all of
+   the following conditions are met:
+
+   * the version ``kver`` of the booted kernel could be retrieved
+
+   * ``/lib/modules/<kver>`` exists in the initramfs
+
+   * ``/lib/modules/<kver>`` does not exist in the rootfs
+
+   Provided by the ``misc`` hook overlay.
 
 
 .. _MISC OVERLAY CMDLINE PARAMETERS:
