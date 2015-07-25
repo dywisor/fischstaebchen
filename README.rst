@@ -417,7 +417,7 @@ zram-autoswap [<size> [<num swaps>]]
    Creates up to ``<num swaps>`` zram swap devices that do no exceed ``<size>``
    in total.
 
-   ``<num swaps>`` default to the cpu core count and the default``<size>``
+   ``<num swaps>`` default to the cpu core count and the default ``<size>``
    depends on the amount of system memory.
    See the ``zram_swap`` boot option for details.
 
@@ -499,7 +499,7 @@ This section describes the boot process of the */init* program.
 
    #. read cmdline from
 
-      * */cmdline/defaults*,
+      * */cmdline.defaults*,
       * */proc/cmdline*,
       * */cmdline*,
       * */cmdline.extend* and
@@ -739,7 +739,7 @@ rootfind=[timeout_centisecs]
 
 nousrmount
    Specifies that */init* should not try to mount */newroot/usr*.
-   A hook should may take care of this instead.
+   A hook should then take care of this instead.
 
    Note that it is not necessary to specify this parameter when using hooks
    that mount */newroot/usr*.
