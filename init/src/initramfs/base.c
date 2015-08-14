@@ -14,7 +14,9 @@
 int initramfs_modprobe ( const int quiet, const char* const name ) {
    int retcode;
 
-   initramfs_debug ( "Trying to load module %s", "\n", name );
+   if ( quiet == 0 ) {
+      initramfs_debug ( "Trying to load module %s", "\n", name );
+   }
    retcode = run_command ( BUSYBOX_PROGV_OR("modprobe"), name );
 
    if ( quiet == 0 ) {
