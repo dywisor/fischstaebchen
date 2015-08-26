@@ -16,7 +16,7 @@ fi
 if have_kernel_module_loaded cpuid; then
    @@NOP@@
 
-elif [ -z "${v0}" ]; then
+elif ! kernel_modules_have_kmod_dir; then
    veinfo "No kernel modules available - cannot detect whether cpuid is loaded."
 
 elif modprobe cpuid; then
