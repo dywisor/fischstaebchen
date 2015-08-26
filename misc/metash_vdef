@@ -18,11 +18,11 @@ DEFAULT_INITRAMFS_DATADIR = /init.d
 #DEFAULT_ISHARE_HOOKS
 #DEFAULT_INITRAMFS_LOGFILE
 
-DEFAULT_NEWROOT       = /newroot
-NEWROOT_FIRMWARE_DIR := /lib/firmware
-NEWROOT_MODULES_DIR  := /lib/modules
-NEWROOT_CONFDIR      := /initramfs-config
-NEWROOT_HOOKDIR      := {NEWROOT_CONFDIR}/hooks
+DEFAULT_NEWROOT              = /newroot
+NEWROOT_FIRMWARE_DIR        := /lib/firmware
+NEWROOT_KERNEL_MODULES_DIR  := /lib/modules
+NEWROOT_CONFDIR             := /initramfs-config
+NEWROOT_HOOKDIR             := {NEWROOT_CONFDIR}/hooks
 
 
 IFUP_ESSENTIAL_DIRS = pre-up up post-up pre-down down post-down

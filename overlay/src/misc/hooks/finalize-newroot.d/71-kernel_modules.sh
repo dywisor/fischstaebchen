@@ -17,12 +17,12 @@ want_xfer_kmod=
 if ! ishare_has_flag want-xfer_kmod; then
    veinfo "Not copying kernel module files: disabled."
 
-elif [ -z "${NEWROOT_MODULES_DIR-}" ]; then
-   eerror "Cannot copy module files: NEWROOT_MODULES_DIR is not set."
+elif [ -z "${NEWROOT_KERNEL_MODULES_DIR-}" ]; then
+   eerror "Cannot copy module files: NEWROOT_KERNEL_MODULES_DIR is not set."
 
 elif kver="$(uname -r @@NO_STDERR@@)" && [ -n "${kver}" ]; then
    initramfs_kmod_dir="${initramfs_kmod_root}/${kver}"
-   newroot_kmod_dir="${NEWROOT_MODULES_DIR}/${kver}"
+   newroot_kmod_dir="${NEWROOT_KERNEL_MODULES_DIR}/${kver}"
 
    if \
       [ -d "${initramfs_kmod_dir}" ] && \
