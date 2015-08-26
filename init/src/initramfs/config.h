@@ -59,6 +59,13 @@
 
 #define GET_INITRAMFS_CONFDIR(p)  INITRAMFS_CONFDIR "/" p
 
+#ifndef INITRAMFS_KERNEL_MODULES_DIR
+#define INITRAMFS_KERNEL_MODULES_DIR  "/lib/modules"
+#endif
+
+#define GET_INITRAMFS_KERNEL_MODULES_DIR(p)  \
+   INITRAMFS_KERNEL_MODULES_DIR "/" p
+
 
 #ifndef LDCONFIG_EXE
 #define LDCONFIG_EXE  "/sbin/ldconfig"

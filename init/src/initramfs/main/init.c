@@ -69,7 +69,8 @@ static int have_modules_dir (void) {
 
    RETFAIL_IF_NULL (
       mdir = join_str_triple (
-         "/lib/modules/", initramfs_globals->kernel_release_str, "/modules.dep"
+         (INITRAMFS_KERNEL_MODULES_DIR "/"),
+         initramfs_globals->kernel_release_str, "/modules.dep"
       )
    );
 
