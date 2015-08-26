@@ -7,8 +7,8 @@
 
 set -u
 
-initramfs_fw_dir="/lib/firmware"
-initramfs_kmod_root="/lib/modules"
+initramfs_fw_dir="${INIT_KERNEL_FIRMWARE_DIR}"
+initramfs_kmod_root="${INIT_KERNEL_MODULES_DIR}"
 
 initramfs_kmod_dir=
 newroot_kmod_dir=

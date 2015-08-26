@@ -11,6 +11,9 @@ INIT_FUNCTIONS="@@FUNCTIONS@@"
 ## this file:
 INIT_ENVFILE="@@ENVFILE@@"
 
+INIT_KERNEL_FIRMWARE_DIR="@@INITRAMFS_KERNEL_FIRMWARE_DIR@@"
+INIT_KERNEL_MODULES_DIR="@@INITRAMFS_KERNEL_MODULES_DIR@@"
+
 
 ## vars usually set by PID 1
 ## FIXME: need to be created manually when using foreign init

@@ -19,7 +19,8 @@ kernel_modules__get_kver() {
 kernel_modules__get_kver_and_mod_dir() {
    mod_dir=
    kernel_modules__get_kver "${@}" || return @@EX_NOT_SUPPORTED@@
-   mod_dir="/lib/modules/${mod_dir}"
+   [ -n "${INIT_KERNEL_MODULES_DIR}" ] || return @@EX_NOT_SUPPORTED@@
+   mod_dir="${INIT_KERNEL_MODULES_DIR%/}/${mod_dir}"
    [ -d "${mod_dir}" ] || return @@EX_NOT_SUPPORTED@@
 }
 
