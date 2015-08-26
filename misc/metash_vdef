@@ -19,7 +19,7 @@ DEFAULT_INITRAMFS_DATADIR = /init.d
 #DEFAULT_INITRAMFS_LOGFILE
 
 DEFAULT_NEWROOT              = /newroot
-NEWROOT_FIRMWARE_DIR        := /lib/firmware
+NEWROOT_KERNEL_FIRMWARE_DIR := /lib/firmware
 NEWROOT_KERNEL_MODULES_DIR  := /lib/modules
 NEWROOT_CONFDIR             := /initramfs-config
 NEWROOT_HOOKDIR             := {NEWROOT_CONFDIR}/hooks

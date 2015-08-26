@@ -37,12 +37,12 @@ want_xfer_fw=
 if ! ishare_has_flag want-xfer_fw; then
    veinfo "Not copying kernel firmware files: disabled."
 
-elif [ -z "${NEWROOT_FIRMWARE_DIR-}" ]; then
-   eerror "Cannot copy firmware files: NEWROOT_FIRMWARE_DIR is not set."
+elif [ -z "${NEWROOT_KERNEL_FIRMWARE_DIR-}" ]; then
+   eerror "Cannot copy firmware files: NEWROOT_KERNEL_FIRMWARE_DIR is not set."
 
 elif \
    [ -d "${initramfs_fw_dir}" ] && \
-   [ ! -d "${NEWROOT_FIRMWARE_DIR}" ]
+   [ ! -d "${NEWROOT_KERNEL_FIRMWARE_DIR}" ]
 then
    einfo "Found kernel firmware files"
    want_xfer_fw=y
@@ -53,14 +53,14 @@ transfer_modules_and_firmware() {
 
    if [ -n "${want_xfer_fw}" ]; then
       einfo "Copying kernel firmware files to newroot"
-      copytree \
-         "${initramfs_fw_dir}" "${NEWROOT_FIRMWARE_DIR}" || fail=0 ## non-fatal for now
+      copytree "${initramfs_fw_dir}" \
+         "${NEWROOT_KERNEL_FIRMWARE_DIR}" || fail=0 ## non-fatal for now
    fi
 
    if [ -n "${want_xfer_kmod}" ]; then
       einfo "Copying kernel modules to newroot"
-      copytree \
-      "${initramfs_kmod_dir}" "${newroot_kmod_dir}" || fail=0 ## non-fatal
+      copytree "${initramfs_kmod_dir}" \
+         "${newroot_kmod_dir}" || fail=0 ## non-fatal
    fi
 
    return ${fail}
