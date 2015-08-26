@@ -87,7 +87,26 @@ kernel_modules_check_module_loaded() {
    [ -z "${v0}" ]
 }
 
-## int have_kernel_module_loaded ( *module_name, **v0! )
-have_kernel_module_loaded() {
-   kernel_modules_check_module_loaded "${@}"
+## int kernel_modules_try_load_module ( module )
+##
+kernel_modules_try_load_module() {
+   <%%locals retlatch %>
+
+   if kernel_modules_check_module_loaded "${1}"; then
+      veinfo "kernel module '${1}' is already loaded."
+      return 0
+
+   elif ! kernel_modules_have_kmod_dir; then
+      veinfo "No kernel modules available - cannot detect whether '${1}' is loaded."
+      return 0
+
+   elif modprobe "${1}"; then
+      veinfo "Successfully loaded kernel module: ${1}"
+      return 0
+
+   else
+      retlatch=${?}
+      ewarn "Could not load the '${1}' kernel module (rc=${retlatch})."
+      return ${retlatch}
+   fi
 }
