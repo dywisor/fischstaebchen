@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "proc.h"
+#include "proc_misc.h"
 #include "../config.h"
 #include "../mac.h"
 

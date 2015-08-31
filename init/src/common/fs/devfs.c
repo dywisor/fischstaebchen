@@ -17,7 +17,7 @@
 #include "stat.h"
 #include "baseops.h"
 #include "constants.h"
-#include "proc.h"
+#include "proc_misc.h"
 #include "fileio.h"
 #include "../config.h"
 #include "../mac.h"

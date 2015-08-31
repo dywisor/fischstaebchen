@@ -5,8 +5,8 @@
  * (See LICENSE.MIT or http://opensource.org/licenses/MIT)
  */
 
-#ifndef _COMMON_FS_PROC_H_
-#define _COMMON_FS_PROC_H_
+#ifndef _COMMON_FS_PROC_MISC_H_
+#define _COMMON_FS_PROC_MISC_H_
 
 /** data struct for entries read from /proc/misc */
 struct proc_misc_chardev_info {
@@ -66,4 +66,4 @@ int proc_misc_chardev_minor_foreach (
    proc_misc_chardev_callback callback, void* const data
 );
 
-#endif /* _COMMON_FS_PROC_H_ */
+#endif /* _COMMON_FS_PROC_MISC_H_ */

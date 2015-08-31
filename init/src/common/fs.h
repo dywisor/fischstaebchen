@@ -18,7 +18,7 @@
 #include "fs/mount.h"
 #include "fs/mount_config.h"
 #include "fs/mount_opts.h"
-#include "fs/proc.h"
+#include "fs/proc_misc.h"
 #include "fs/stat.h"
 #include "fs/touch.h"
 
