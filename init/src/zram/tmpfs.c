@@ -259,7 +259,7 @@ static int _zram_tmpfs_config_parse_opts_arr (
    if ( sys_memsize_m < 1 ) { print_warning ( NULL, "sys_memsize_m is 0!" ); }
 
    if ( dynarray_init ( &tmpfs_opts_arr, opts->len ) != 0 ) { return -1; }
-   dynarray_set_data_readonly ( &tmpfs_opts_arr, 1 );
+   dynarray_set_data_readonly ( &tmpfs_opts_arr );
 
 #define LX__ISPREFIX(s)  ( (val = str_startswith ( opt, s )) != NULL )
 

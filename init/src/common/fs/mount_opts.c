@@ -33,7 +33,7 @@ char* get_mount_opts_str (
    char* opts;
 
    if ( dynarray_init ( &darr, 0 ) != 0 ) { return NULL; }
-   darr.flags |= DYNARRAY_IS_CONST;
+   dynarray_set_data_readonly ( &darr );
 
 #define _OAPPEND(bit,s)        (flags & bit) ? dynarray_append_strnodup(&darr,s) : 0
 #define _OAPPEND_OR(bit,s,t)   dynarray_append_strnodup ( &darr, (flags & bit) ? s : t )

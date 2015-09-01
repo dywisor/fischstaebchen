@@ -13,13 +13,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-enum {
-   DYNARRAY_IS_CONST = 0x1
-};
 
 #ifndef DYNARRAY_DEFAULT_INITIAL_CAPACITY
 enum { DYNARRAY_DEFAULT_INITIAL_CAPACITY = 1 };
 #endif
+
+typedef void(*dynarray_free_item_ptr_func)(void**);
 
 /**
  * dynamically allocated array - data type
@@ -31,9 +30,10 @@ struct dynarray {
    size_t       len;
    /** capacity of the array (allocated size) */
    size_t       size;
-   /** flags, e.g. "has const data" */
-   unsigned     flags;
+
+   dynarray_free_item_ptr_func item_destructor;
 };
+
 
 /**
  * Initializes a dynamically allocated array.
@@ -57,14 +57,30 @@ __attribute__((warn_unused_result))
 struct dynarray* new_dynarray ( const size_t initial_size );
 
 /**
+ * "Frees" a const dynarray item,
+ * which simply sets the item pointer to NULL.
+ *
+ * @param item_ptr    pointer to dynarray item
+ */
+void dynarray_free_const_item_ptr (void** item_ptr);
+
+/**
+ * Sets the dynarray's item destructor function.
+ *
+ * @param p_darr              pointer to the dynarray (should not be NULL)
+ * @param item_destructor     impure function :: void** -> void
+ */
+void dynarray_set_item_destructor (
+   struct dynarray* const p_darr,
+   dynarray_free_item_ptr_func item_destructor
+);
+
+/**
  * Sets or unsets a dynarray's "readonly data" flag.
  *
  * @param p_darr  pointer to the dynarray (must not be NULL)
- * @param status  intbool (0 => unset flag, else: set "readonly" flag)
  */
-void dynarray_set_data_readonly (
-   struct dynarray* const p_darr, const int status
-);
+void dynarray_set_data_readonly ( struct dynarray* const p_darr );
 
 /**
  * Resizes a dynarray so that it has enough space for at least want_len items.

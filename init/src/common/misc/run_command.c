@@ -246,7 +246,7 @@ int run_command_va_list (
    struct dynarray darr;
 
    if ( dynarray_init ( &darr, 3 ) != 0 ) { return -1; }
-   darr.flags |= DYNARRAY_IS_CONST;
+   dynarray_set_data_readonly ( &darr );
 
    if ( va_list_to_dynarray ( &darr, vargs, 0 ) != 0 ) {
       retcode = -1;
@@ -460,7 +460,7 @@ int run_command_until_success_va_list (
    struct dynarray darr;
 
    if ( dynarray_init ( &darr, 3 ) != 0 ) { return -1; }
-   darr.flags |= DYNARRAY_IS_CONST;
+   dynarray_set_data_readonly ( &darr );
 
    if ( va_list_to_dynarray ( &darr, vargs, 0 ) != 0 ) {
       retcode = -1;

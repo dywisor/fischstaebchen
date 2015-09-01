@@ -14,6 +14,38 @@
 #include "message.h"
 #include "dynarray.h"
 
+static inline void _dynarray_free_item_ptr_use_destructor (
+   const struct dynarray* const p_darr,
+   void** const item_ptr
+) {
+   /* NULL does not need to be freed */
+   if ( *item_ptr == NULL ) { return; }
+
+   p_darr->item_destructor ( item_ptr );
+   /* if destructor did not care
+    * (i.e. set item to NULL after freeing/releasing it),
+    * then we do it here.
+    *
+    * IOW, it is *critical* that destructors set
+    * *item_ptr = NULL after freeing the item.
+    */
+   if ( *item_ptr != NULL ) {
+      x_free ( *item_ptr );
+   }
+}
+
+static inline void _dynarray_free_item_ptr (
+   const struct dynarray* const p_darr,
+   void** const item_ptr
+) {
+   if ( p_darr->item_destructor != NULL ) {
+      _dynarray_free_item_ptr_use_destructor ( p_darr, item_ptr );
+   } else {
+      x_free ( *item_ptr );
+   }
+}
+
+
 int dynarray_resize (
    struct dynarray* const p_darr, const size_t want_len
 ) {
@@ -61,9 +93,9 @@ int dynarray_init (
    p_darr->arr = malloc ( real_init_size * (sizeof *(p_darr->arr)) );
    if ( p_darr->arr == NULL ) { return -10; }
 
-   p_darr->size     = real_init_size;
-   p_darr->len      = 0;
-   p_darr->flags    = 0x0;
+   p_darr->size            = real_init_size;
+   p_darr->len             = 0;
+   p_darr->item_destructor = NULL;
 
    return 0;
 }
@@ -82,39 +114,46 @@ struct dynarray* new_dynarray ( const size_t initial_size ) {
    return p_darr;
 }
 
-void dynarray_set_data_readonly (
-   struct dynarray* const p_darr, const int status
-) {
-   if ( status ) {
-      p_darr->flags |= (unsigned)DYNARRAY_IS_CONST;
-   } else {
-      p_darr->flags &= (unsigned)~DYNARRAY_IS_CONST;
-   }
+void dynarray_free_const_item_ptr (void** item_ptr) {
+   *item_ptr = NULL;
 }
 
+void dynarray_set_item_destructor (
+   struct dynarray* const p_darr,
+   dynarray_free_item_ptr_func item_destructor
+) {
+   if ( p_darr == NULL ) { return; }
+   p_darr->item_destructor = item_destructor;
+}
+
+void dynarray_set_data_readonly ( struct dynarray* const p_darr ) {
+   dynarray_set_item_destructor (
+      p_darr,
+      dynarray_free_const_item_ptr
+   );
+}
 
 int dynarray_release ( struct dynarray* const p_darr ) {
-   size_t i;
-   void** parr;
+   size_t k;
 
    if ( p_darr == NULL ) { return 0; }
 
-   parr = p_darr->arr;
+   if ( p_darr->arr != NULL ) {
+      if ( p_darr->item_destructor == NULL ) {
+         for ( k = 0; k < p_darr->len; k++ ) {
+            x_free ( dynarray_get(p_darr, k) );
+         }
 
-   if ( parr != NULL ) {
-      if ( (p_darr->flags & DYNARRAY_IS_CONST) == 0 ) {
-         /* array items are owned by this data struct (non-const) => free() */
-         x_free_arr_items ( parr, p_darr->len );
       } else {
-         /* array items are const => set to NULL */
-         for ( i = 0; i < p_darr->len; i++ ) {
-            parr[i] = NULL;
+         for ( k = 0; k < p_darr->len; k++ ) {
+            _dynarray_free_item_ptr_use_destructor (
+               p_darr, &(dynarray_get(p_darr, k))
+            );
          }
       }
    }
 
    p_darr->len = 0;
-
    return 0;
 }
 
@@ -124,9 +163,7 @@ int dynarray_free ( struct dynarray* const p_darr ) {
    if ( dynarray_release ( p_darr ) != 0 ) { return -1; }
 
    x_free ( p_darr->arr );
-
    p_darr->size = 0;
-
    return 0;
 }
 
@@ -220,9 +257,8 @@ int dynarray_pop ( struct dynarray* const p_darr, void** const data_out ) {
 
    if ( data_out != NULL ) {
       *data_out = pdata;
-
-   } else if ( (p_darr->flags & DYNARRAY_IS_CONST) == 0 ) {
-      x_free ( pdata );
+   } else {
+      _dynarray_free_item_ptr ( p_darr, &pdata );
    }
 
    return 0;
