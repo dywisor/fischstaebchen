@@ -133,7 +133,7 @@ int dynarray_free ( struct dynarray* const p_darr ) {
 void dynarray_free_ptr ( struct dynarray** const p_darr ) {
    if ( p_darr == NULL ) { return; }
    dynarray_free ( *p_darr );
-   *p_darr = NULL;
+   x_free ( *p_darr );
 }
 
 int dynarray_append ( struct dynarray* const p_darr, void* const data ) {
