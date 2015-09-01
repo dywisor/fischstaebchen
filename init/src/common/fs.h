@@ -19,6 +19,7 @@
 #include "fs/mount_config.h"
 #include "fs/mount_opts.h"
 #include "fs/proc_misc.h"
+#include "fs/process_info.h"
 #include "fs/stat.h"
 #include "fs/touch.h"
 
