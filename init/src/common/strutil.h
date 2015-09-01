@@ -11,6 +11,7 @@
 #include "strutil/argsplit.h"
 #include "strutil/compare.h"
 #include "strutil/convert.h"
+#include "strutil/format.h"
 #include "strutil/join.h"
 #include "strutil/misc.h"
 #include "strutil/split.h"
