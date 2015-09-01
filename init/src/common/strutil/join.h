@@ -68,6 +68,11 @@ char* join_str_dynarray (
 __attribute__((warn_unused_result))
 char* join_str_pair ( const char* const left, const char* const right );
 
+int join_str_pair_to (
+   char** const restrict out_str,
+   const char* const left, const char* const right
+);
+
 /**
  * Joins three strings.
  *
@@ -81,5 +86,12 @@ __attribute__((warn_unused_result))
 char* join_str_triple (
    const char* const left, const char* const middle, const char* const right
 );
+
+int join_str_triple_to (
+   char** const restrict out_str,
+   const char* const left, const char* const middle, const char* const right
+);
+
+
 
 #endif /* _COMMON_STRUTIL_JOIN_H_ */

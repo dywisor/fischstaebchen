@@ -12,8 +12,37 @@
 #include <sys/types.h>
 
 #include "join.h"
+#include "../mac.h"
 #include "../dynstr.h"
 #include "../dynarray.h"
+
+int join_str_pair_to (
+   char** const restrict out_str,
+   const char* const left, const char* const right
+) {
+   char* buf;
+
+   if ( out_str == NULL ) { return -1; }
+   *out_str = NULL;
+   buf      = join_str_pair ( left, right );
+   if ( buf == NULL ) { return -1; }
+   *out_str = buf;
+   return 0;
+}
+
+int join_str_triple_to (
+   char** const restrict out_str,
+   const char* const left, const char* const middle, const char* const right
+) {
+   char* buf;
+
+   if ( out_str == NULL ) { return -1; }
+   *out_str = NULL;
+   buf      = join_str_triple ( left, middle, right );
+   if ( buf == NULL ) { return -1; }
+   *out_str = buf;
+   return 0;
+}
 
 
 char* join_str_array (
