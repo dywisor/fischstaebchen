@@ -5,4 +5,5 @@ include $(SRCDIR)/app/pingloop/obj_defs.mk
 include $(SRCDIR)/app/untar/obj_defs.mk
 include $(SRCDIR)/app/filescan/obj_defs.mk
 include $(SRCDIR)/app/filesize/obj_defs.mk
+include $(SRCDIR)/app/read-proc/obj_defs.mk
 include $(SRCDIR)/app/ssh-validate-sync-command/obj_defs.mk
