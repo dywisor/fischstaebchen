@@ -939,6 +939,17 @@ class ShellMacros ( object ):
       # --
    # --- end of __init__ (...) ---
 
+   def _get_tmpvar_name ( self, identifier ):
+      try:
+         k = int ( identifier, 10 )
+      except ValueError:
+         pass
+      else:
+         return self.STR_VFORMAT ( 't{0:d}', ( k, ), {} )
+
+      return self.STR_VFORMAT ( 'tmsv__{0!s}', ( identifier, ), {} )
+   # ---
+
    def _expand_strfeed_sh (
       self, builtin_name, args_str, args_tuple, argv, fmt_vars
    ):
@@ -1572,9 +1583,7 @@ class ShellMacros ( object ):
       for k in range(num_repeat):
          yield line
 
-   def expand_ifs (
-      self, builtin_name, args_str, args_tuple, argv, fmt_vars
-   ):
+   def _get_ifs_components ( self, argv ):
       def gen_ifs_components ( argv ):
          ifs_map = {
             '_'         : '<>',
@@ -1599,10 +1608,18 @@ class ShellMacros ( object ):
                   yield arg
       # ---
 
+      return ''.join ( gen_ifs_components ( argv ) )
+   # --- end of _get_ifs_components (...) ---
+
+   def expand_ifs (
+      self, builtin_name, args_str, args_tuple, argv, fmt_vars
+   ):
       yield self.STR_VFORMAT (
          '{I}IFS="{0}"',
-         ( ''.join ( gen_ifs_components(argv) ), ), fmt_vars
+         ( self._get_ifs_components ( argv ), ),
+         fmt_vars
       )
+   # --- end of expand_ifs (...) ---
 
    def expand_revrev (
       self, builtin_name, args_str, args_tuple, argv, fmt_vars
@@ -1842,41 +1859,93 @@ class ShellMacros ( object ):
 
    def _expand_set_argv (
       self, l_append, r_append,
-      builtin_name, args_str, args_tuple, argv, fmt_vars
+      builtin_name, args_str, args_tuple, argv, basic_fmt_vars
    ):
-      setf = True
-      if args_tuple[0] in { "-f", "--setf", "--" }:
-         #setf = True
-         set_argv = args_tuple[1]
-      elif args_tuple[0] in { "+f", "--no-setf" }:
-         setf = False
-         set_argv = args_tuple[1]
-      else:
-         set_argv = args_str
+      # (set_argv) [ifs=<ifs>|ifs <ifs>] ...
+      want_ifs_expand = None
 
-      _vformat = self.STR_VFORMAT
+      argv_offset = -1
+      for k, arg in enumerate(argv):
+         if argv_offset > k:
+            # blind
+            pass
 
-      set_argv = _vformat (
-         "{1}{0}{2}",
-         (
-            (set_argv or ''),
-            ( (l_append + ' ') if l_append else '' ),
-            ( (' ' + r_append) if r_append else '' )
-         ),
-         {}
-      )
+         elif not arg:
+            argv_offset = k
+            break
 
-      if set_argv:
-         yield _vformat ( '{I}# shellcheck disable=SC2048', (), fmt_vars )
+         elif arg == "ifs":
+            argv_offset = k + 2
 
-         if setf:
-            yield _vformat (
-               '{I}{{ set -f; set -- {0}; set +f; }}', ( set_argv, ), fmt_vars
-            )
+            if (k + 1) < len(argv):
+               want_ifs_expand = argv [k + 1]
+            else:
+               raise ValueError()
+            # --
+
+         elif arg[:4] == "ifs=":
+            argv_offset = k + 1
+            want_ifs_expand = arg[4:]
+
          else:
-            yield _vformat ( '{I}set -- {0}', ( set_argv, ), fmt_vars )
+            argv_offset = k
+            break
+      # --
+
+      if argv_offset >= 0 and argv_offset < len(argv):
+         set_cmd_arg = ' '.join ( argv[argv_offset:] )
       else:
-         yield _vformat ( '{I}set --', (), fmt_vars )
+         set_cmd_arg = None
+
+      set_cmd_args = ''.join ((
+         ( (l_append + ' ') if l_append else '' ),
+         (set_cmd_arg or ''),
+         ( (' ' + r_append) if r_append else '' )
+      ))
+
+      if set_cmd_args:
+         fmt_args = (
+            set_cmd_args,
+            self._get_tmpvar_name('oldifs'),
+            (
+               self._get_ifs_components(want_ifs_expand.split(","))
+               if want_ifs_expand else ""
+            )
+         )
+
+         lines = [
+            '{I}# shellcheck disable=SC2048',
+            '{I}{{'
+         ]
+
+         if want_ifs_expand is not None:
+            lines += [
+               '{I}   {1}="${{IFS}}"',
+               '{I}   IFS="{2}"'
+            ]
+         # --
+
+         lines += [
+            '{I}   case "$-" in',
+            '{I}      *f*) set -- {0} ;;',
+            '{I}      *)   set -f; set -- {0}; set +f ;;',
+            '{I}   esac'
+         ]
+
+         if want_ifs_expand is not None:
+            lines += [
+               '{I}   IFS="${{{1}?}}"',
+               '{I}   unset -v {1}'
+            ]
+         # --
+
+         lines += [ '{I}}}' ]
+      else:
+         fmt_args = ()
+         lines    = [ '{I}set --' ]
+      # -- end if
+
+      return self.vformat_lines ( fmt_args, basic_fmt_vars, lines )
    # --- end of _expand_set_argv (...) ---
 
    def expand_set_argv ( self, *args, **kwargs ):
