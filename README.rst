@@ -386,6 +386,78 @@ pingloop [<host>]
 
    Not part of the *init utils*.
 
+read-proc-cmdline [-h] [-q <quote_str>|-Q] [-F <arg_sep>] [-f <range>] [-b|-B] [<pid>|<file>|-]
+   Reads a null-separated ``/proc/<pid>/cmdline`` file and prints the args
+   to stdout.
+
+   Optionally accepts one positional argument,
+   which may a path to a file (read from ``<file>``),
+   a process id (read from ``/proc/<pid>/cmdline``)
+   or \- (read from *stdin*).
+   By default, reads the cmdline of the calling process.
+
+   Options:
+
+      -h
+         Print usage.
+
+      -q <quote_str>
+         Quote args, i.e. print ``<quote_str>`` before and after each arg.
+
+      -Q
+         Same as ``-q "`` (``"`` would have to be escaped shell scripts).
+
+      -F <arg_sep>
+         Use ``<arg_sep>`` to separate args,
+         i.e. print ``<arg_sep>`` before each arg except for the first one.
+         Defaults to *newline*.
+
+      -f <range>
+         Select args by index.
+         May be a single arg index (``<index>``),
+         or a range from ``<start>`` to ``<end>`` (inclusive;  ``<start-end>``),
+         where ``<start>`` or ``<end>`` may be omitted,
+         resulting in a half-open range.
+
+      -b
+         Print the basename of the first selected arg
+         (subsequent args remain unchanged).
+
+      -B
+         Print the basename of the first arg and do not print subsequent args.
+         Identical to ``-b -f 1``.
+
+read-proc-environ [-h] [-q <quote_str>|-Q] {-V <varname_pattern>} [<pid>|<file>|-]
+   Reads a null-separated ``/proc/<pid>/environ`` file and prints the
+   environment variables to stdout.
+
+   Optionally accepts one positional argument,
+   which may a path to a file (read from ``<file>``),
+   a process id (read from ``/proc/<pid>/environ``)
+   or \- (read from *stdin*).
+   By the default, reads the environment file of the calling process.
+
+   Options:
+
+      -h
+         Print usage.
+
+      -q <quote_str>
+         Quote values, i.e. print ``<quote_str>`` before and after each value
+         (``varname=<quote_str>value<quote_str>``).
+
+      -Q
+         Same as ``-q "`` (``"`` would have to be escaped shell scripts).
+
+      -F <var_sep>
+         Use ``<arg_sep>`` to separate variables,
+         i.e. print ``<arg_sep>`` before each variable except for the first one.
+         Defaults to *newline*.
+
+      -V <varname_pattern>
+         Print only variables whose name matches the given *glob-style* pattern.
+         May be specified more than once (print if any pattern matches).
+
 ssh-validate-sync-command
    Executes the command read from the ``SSH_ORIGINAL_COMMAND`` environment
    variable if it does not contain "malicious" chars
