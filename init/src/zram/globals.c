@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>  /* snprintf() */
 #include <unistd.h>
 #include <string.h>
 #include <inttypes.h>

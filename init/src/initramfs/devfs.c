@@ -21,6 +21,7 @@
 #include "../common/misc/run_command.h"
 
 #include "../common/strutil/compare.h"
+#include "../common/strutil/format.h"
 
 #include "globals.h"
 #include "base.h"
@@ -186,19 +187,24 @@ static int _initramfs_wait_for_disk__dev (
 static int _initramfs_wait_for_disk__label_or_uuid (
    const unsigned timeout_decisecs, const char* const disk_spec
 ) {
-#define BUFSIZE 50
+#define BUFSIZE 51
+   char msg [BUFSIZE];
 
-   char msg [BUFSIZE+1];
-   ssize_t sret;
+   switch (
+      str_format ( NULL, msg, BUFSIZE, "Waiting for disk %s", disk_spec )
+   ) {
+      case STRFORMAT_RET_SUCCESS:
+         break;
 
-   sret = snprintf ( msg, BUFSIZE, "Waiting for disk %s", disk_spec );
+      case STRFORMAT_RET_BUF_TO_SMALL:
+         /* BUFSIZE > 2 */
+         msg [BUFSIZE-3] = '<';
+         msg [BUFSIZE-2] = '>';
+         break;
 
-   if ( sret < 0 ) {
-      *msg = '\0';
-   } else if ( sret >= BUFSIZE ) {
-      /* BUFSIZE > 2 */
-      msg [BUFSIZE-2] = '<';
-      msg [BUFSIZE-1] = '>';
+      default:
+         msg [0] = '\0';
+         break;
    }
 
    return run_command_until_success_quiet (

@@ -20,6 +20,7 @@
 #include "../dynstr.h"
 #include "../strutil/join.h"
 #include "../strutil/compare.h"
+#include "../strutil/format.h"
 #include "../mac.h"
 #include "../message.h"
 
@@ -280,20 +281,18 @@ int parse_tmpfs_size_spec (
 }
 
 char* create_tmpfs_size_opt ( const size_t size_m ) {
-   /* FIXME: no need to strdup(), dyn-alloc num_bytes instead */
    /* "size=" + %%size_m + '\0' */
 #define BUFSIZE (5 + 39 + 1)
+   char* buf;
 
-   char buf [BUFSIZE];
-   ssize_t num_bytes;
-
-   num_bytes = snprintf ( buf, BUFSIZE, "size=%zum", size_m );
-
-   if ( (num_bytes < 0) || (num_bytes >= BUFSIZE) ) {
-      return NULL;
-   } else {
-      return strdup ( buf );
+   buf = malloc ( BUFSIZE );
+   if ( buf != NULL ) {
+      if ( str_format_check_fail ( buf, BUFSIZE, "size=%zum", size_m ) ) {
+         x_free ( buf );
+      }
    }
+
+   return buf;
 #undef BUFSIZE
 }
 

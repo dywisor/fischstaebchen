@@ -19,6 +19,7 @@
 #include "../dynstr.h"
 #include "../dynarray.h"
 #include "../strutil/join.h"
+#include "../strutil/format.h"
 #include "../strutil/split.h"
 
 
@@ -195,19 +196,15 @@ int sysfs_write_int64_decimal (
    const int64_t value
 ) {
 #define BUFSIZE 21  /* 19 digits + sign + '\0' */
-
    char istr [BUFSIZE];
-   ssize_t ret;
 
-   ret = snprintf ( istr, BUFSIZE, "%" PRId64, value );
+   switch ( str_format ( NULL, istr, BUFSIZE,  "%" PRId64, value ) ) {
+      case STRFORMAT_RET_SUCCESS:
+         return sysfs_write_str ( dirpath, filename, istr );
 
-   if ( ret < 0 ) {
-      return -1;
-   } else if ( ret > BUFSIZE ) {
-      return -2;
+      default:
+         return -1;
    }
-
-   return sysfs_write_str ( dirpath, filename, istr );
 #undef BUFSIZE
 }
 
@@ -217,19 +214,15 @@ int sysfs_write_uint64_decimal (
    const uint64_t value
 ) {
 #define BUFSIZE 21 /* 20 digits + '\0' */
-
    char istr [BUFSIZE];
-   ssize_t ret;
 
-   ret = snprintf ( istr, BUFSIZE, "%" PRIu64, value );
+   switch ( str_format ( NULL, istr, BUFSIZE, "%" PRIu64, value ) ) {
+      case STRFORMAT_RET_SUCCESS:
+         return sysfs_write_str ( dirpath, filename, istr );
 
-   if ( ret < 0 ) {
-      return -1;
-   } else if ( ret > BUFSIZE ) {
-      return -2;
+      default:
+         return -1;
    }
-
-   return sysfs_write_str ( dirpath, filename, istr );
 #undef BUFSIZE
 }
 

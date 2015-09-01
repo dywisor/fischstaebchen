@@ -11,6 +11,7 @@ PROG_PINGLOOP_ANY_NAMES       += common/message
 PROG_PINGLOOP_ANY_NAMES       += common/strutil/join
 PROG_PINGLOOP_ANY_NAMES       += common/dynstr
 PROG_PINGLOOP_ANY_NAMES       += common/strutil/convert
+PROG_PINGLOOP_ANY_NAMES       += common/strutil/format
 
 PROG_PINGLOOP_MAIN_SRC       = $(call f_get_objectsv,app/pingloop/main)
 PROG_PINGLOOP_SRC_DEP       += $(call get_c_objects,APP_PINGLOOP)

@@ -12,6 +12,7 @@ PROG_ZTMPFS_HEADERS_NAMES   += zram/config
 PROG_ZTMPFS_HEADERS_NAMES   += common/config
 PROG_ZTMPFS_ANY_NAMES       += zram/globals
 PROG_ZTMPFS_ANY_NAMES       += common/strutil/convert
+PROG_ZTMPFS_ANY_NAMES       += common/strutil/format
 PROG_ZTMPFS_ANY_NAMES       += common/strutil/join
 PROG_ZTMPFS_ANY_NAMES       += common/dynstr
 PROG_ZTMPFS_ANY_NAMES       += common/dynarray

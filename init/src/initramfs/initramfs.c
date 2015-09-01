@@ -18,6 +18,7 @@
 #include "../common/fs/mount_config.h"
 #include "../common/strutil/compare.h"
 #include "../common/strutil/join.h"
+#include "../common/strutil/format.h"
 #include "../zram/autoswap.h"
 
 #include "baselayout.h"
@@ -57,20 +58,14 @@ int default_initramfs_start (void) {
 
 static void _export_failcode ( const int retcode ) {
 #define BUFSIZE (10 +1)
-   ssize_t num_bytes;
    char buf [BUFSIZE];
-
 
    if ( retcode == 0 ) {
       env_export ( "RETCODE", NULL );
+   } else if ( str_format_check_success ( buf, BUFSIZE, "%d", retcode ) ) {
+      env_export ( "RETCODE", buf );
    } else {
-      num_bytes = snprintf ( buf, BUFSIZE, "%d", retcode );
-
-      if ( (num_bytes < 1) || (num_bytes >= BUFSIZE) ) {
-         env_export ( "RETCODE", "-1" );
-      } else {
-         env_export ( "RETCODE", buf );
-      }
+      env_export ( "RETCODE", "-1" );
    }
 #undef BUFSIZE
 }

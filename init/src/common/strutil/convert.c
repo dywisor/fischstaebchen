@@ -10,9 +10,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <inttypes.h>
-#include <stdio.h>
 
 #include "convert.h"
+#include "format.h"
 #include "../mac.h"
 
 static inline void _strutil_convert_to_anycase (
@@ -97,22 +97,16 @@ static inline char* _strutil_get_anycase (
 }
 
 char* uint8_to_str ( const uint8_t k ) {
-   static const ssize_t BUFSIZE = 3 + 1; /* 3 digits  + '\0' */
-
-   char*    str;
-   ssize_t  sret;
-
+#define BUFSIZE 4  /* 3 digits  + '\0' */
+   char* str;
 
    str = malloc ( BUFSIZE );
-
    if ( str != NULL ) {
-      sret = snprintf ( str, BUFSIZE, "%" PRIu8, k );
-
-      /* a number str is always at least one char long */
-      if ( (sret <= 0) || (sret >= BUFSIZE) ) {
+      if ( str_format_check_fail ( str, BUFSIZE, "%" PRIu8, k ) ) {
          x_free ( str );
       }
    }
 
    return str;
+#undef BUFSIZE
 }
