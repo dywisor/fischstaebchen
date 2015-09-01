@@ -13,6 +13,7 @@
 #include "strutil/convert.h"
 #include "strutil/format.h"
 #include "strutil/join.h"
+#include "strutil/lazy_basename.h"
 #include "strutil/misc.h"
 #include "strutil/split.h"
 
