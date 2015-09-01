@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+#include "config.h"
+
+
 #ifndef UNUSED
 #define UNUSED(d)  d __attribute__((unused))
 #endif
@@ -102,5 +105,35 @@
    RET_IF_B_TRUE ( rc, ( ( code ) == NULL ) )
 
 #define RETFAIL_IF_NULL(code) RET_CODE_IF_NULL ( RETFAIL_CODE, code )
+
+
+
+/* file I/O */
+#define X_DECLARE_FILE_READ_BUFFER(buf_varname)  \
+   char buf_varname[DEFAULT_FILE_READ_BUFFER_SIZE]
+
+#define X_FILE_READ_BUFFER(fd, buf_varname)  \
+   read(fd, buf_varname, DEFAULT_FILE_READ_BUFFER_SIZE)
+
+#define X_FILE_READ_BUFFER_NBUF(fd, buf_varname, nbuf_varname)  \
+   (nbuf_varname = X_FILE_READ_BUFFER(fd, buf_varname))
+
+#define X_WITH_OPEN_FILE_CALL_FUNC(retcode_var, filepath, mode, func_call) \
+    do { \
+        int fd; \
+        \
+        if ( filepath == NULL ) { \
+            retcode_var = -1; \
+        } else { \
+            fd = open ( filepath, mode ); \
+            if ( fd < 0 ) { \
+                retcode_var = -1; \
+            } else { \
+                retcode_var = func_call; \
+                IGNORE_RETCODE ( close ( fd ) ); \
+            } \
+        } \
+    } while (0)
+
 
 #endif /* _COMMON_MAC_H_ */

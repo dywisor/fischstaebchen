@@ -105,6 +105,11 @@
 #endif
 
 
+/* file I/O */
+#ifndef DEFAULT_FILE_READ_BUFFER_SIZE
+#define DEFAULT_FILE_READ_BUFFER_SIZE  4096
+#endif
+
 
 #ifdef POST_LOCALCONFIG
 #include #POST_LOCALCONFIG
