@@ -369,9 +369,9 @@ filescan {-e|-f|-d|-b|-c} [--] <basepath> [<basepath>...] -- <suffix> [<suffix>.
 
    Example Usage::
 
-      filescan -f -- /mnt/disk/* -- docs.tar
+      filescan -f -- /mnt/disk/*/ -- docs.tar
 
-      filescan -f -d -- /etc -- machine-id
+      filescan -f -d -- /etc/ -- machine-id
 
 
 filesize <file>
