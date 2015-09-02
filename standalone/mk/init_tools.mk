@@ -1,6 +1,7 @@
 INIT_TOOLS += filescan
 INIT_TOOLS += filesize
 INIT_TOOLS += untar
+#INIT_TOOLS += $(addprefix read-proc-,cmdline environ)
 
 
 INIT_TOOLS += ztmpfs
