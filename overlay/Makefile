@@ -28,12 +28,10 @@ include $(__PRJROOT)/mk/shellgen.mk
 include $(__PRJROOT)/mk/shfunc_def.mk
 
 include $(S)/mk/vars.mk
-include $(S)/mk/overlay_def.mk
 include $(S)/mk/voverlay.mk
 
 OVERLAY_NAMES := $(filter-out meta META,\
 	$(foreach d,$(wildcard $(OVERLAY_SRCDIR)/*),$(notdir $(d))))
-$(foreach name,$(OVERLAY_NAMES),$(eval $(call OVERLAY_DEF,$(name))))
 
 ifneq ($(origin OVERLAYS),command line)
 _ALL_OVERLAYS = $(DEFAULT_OVERLAYS)
@@ -41,6 +39,14 @@ else
 _ALL_OVERLAYS = $(OVERLAYS)
 endif
 _ALL_OVERLAYS += $(VIRTUAL_OVERLAY_NAMES) $(EXTRA_OVERLAYS)
+
+METASH_OPTS += $(foreach ov,\
+	$(filter-out $(_ALL_OVERLAYS),$(OVERLAY_NAMES)),-V HAVE_OVERLAY_$(ov)=0)
+METASH_OPTS += $(foreach ov,$(_ALL_OVERLAYS),-V HAVE_OVERLAY_$(ov)=1)
+
+
+include $(S)/mk/overlay_def.mk
+$(foreach name,$(OVERLAY_NAMES),$(eval $(call OVERLAY_DEF,$(name))))
 
 include $(S)/mk/vars_late.mk
 include $(S)/mk/genfunc.mk
