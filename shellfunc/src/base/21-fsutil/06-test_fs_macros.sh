@@ -46,3 +46,19 @@ test_fs_is_real_file() {
 test_fs_is_real_dir() {
    [ -n "${1-}" ] && [ -d "${1}" ] && [ ! -h "${1}" ]
 }
+
+_test_fs_dir_is_empty() {
+   ls -1 -A -- "${1}/." | grep -q -- .
+}
+
+test_fs_dir_is_empty() {
+   test_fs_is_dir "${1-}" && _test_fs_dir_is_empty "${1}"
+}
+
+_test_fs_dir_is_not_empty() {
+   ! _test_fs_dir_is_empty "${@}"
+}
+
+test_fs_dir_is_not_empty() {
+   test_fs_is_dir "${1-}" && _test_fs_dir_is_not_empty "${1}"
+}
