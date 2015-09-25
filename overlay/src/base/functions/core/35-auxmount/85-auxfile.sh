@@ -9,7 +9,7 @@ auxmount_get_filepath() {
    <%%retvar v0 %>
    <%%locals type srcpath -p uri_ _ basepath filepath %>
 
-   parse_file_uri "$@" && \
+   parse_nondir_file_uri "${@}" && \
    auxmount_do_get_filepath "${type}" "${uri_basepath}" "${uri_filepath}"
 }
 

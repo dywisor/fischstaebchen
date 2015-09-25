@@ -4,11 +4,38 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
+int split_git_uri(uri_checkout_str, **git_uri!, **git_checkout!) {
+   <%%retvars git_uri git_checkout %>
+
+   case "${1}" in
+      *)
+         return 2
+      ;;
+      *::*)
+         git_uri="${1%::*}"
+         git_checkout="${1##*::}"
+      ;;
+      *)
+         git_uri="${1}"
+         git_checkout=""
+      ;;
+   esac
+
+   [ -n "${git_uri}" ]
+}
+
+int check_git_uri_valid(...) {
+   <%%locals git_uri git_checkout %>
+   split_git_uri "${@}"
+}
+
 int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
    <%%zapvars type srcpath uri %>
+   <%%locals alt_srcpath %>
 
    [ -n "${1-}" ] || return @@EX_USAGE@@
 
+   alt_srcpath=""
    case "${1}" in
       /*)
          type=local
@@ -23,15 +50,18 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
       aux://*|file://*|disk://*|\
       http://*|https://*|ftp://*|\
       cifs://*|smb://*|nfs://*|\
-      github://*|gh://*)
+      github://*|gh://*|\
+      git://*|git+ssh://*)
          type="${1%%://*}"
          srcpath="${1#*://}"
+         alt_srcpath="${1}"
       ;;
 
       aux=*|file=*|disk=*|\
       http=*|https=*|ftp=*|\
       cifs=*|smb=*|nfs=*|\
-      github=*|gh=*)
+      github=*|gh=*|\
+      git=*)
          type="${1%%=*}"
          srcpath="${1#*=}"
       ;;
@@ -52,9 +82,12 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
       gh)
          type=github
       ;;
+      git+ssh)
+         type=git
+      ;;
    esac
 
-   # 3: set uri / verify srcpath
+   # 3: set uri / verify srcpath (may change type non-recursive)
    case "${type}" in
       local|file)
          uri="${srcpath}"
@@ -99,6 +132,10 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
          uri="${type}://${srcpath#/}"
       ;;
 
+      git)
+         uri="${alt_srcpath:-${srcpath}}"
+      ;;
+
       *)
          uri="${type}://${srcpath#/}"
       ;;
@@ -133,6 +170,16 @@ int preparse_file_uri_verbose (...) {
    return 0;
 }
 
+int check_file_uri_type_dir_only(type) {
+   case "${1}" in
+      git)
+         return 0
+      ;;
+   esac
+
+   return 1
+}
+
 int parse_file_uri (
    uri, **type!, **srcpath!, **uri!, **uri_basepath!, **uri_filepath!
 ) {
@@ -144,7 +191,7 @@ int parse_file_uri (
    ##  could reassemble it from srcpath
 
    case "${type}" in
-      local|http*|ftp|aux|nfs)
+      local|http*|ftp|aux|nfs|git)
          uri_basepath="${srcpath%/*}"
          uri_filepath="${srcpath##*/}"
       ;;
@@ -172,6 +219,19 @@ int parse_file_uri (
          die "parse_file_uri(): unhandled uri type: ${type}"
       ;;
    esac
+
+   return 0
+}
+
+int parse_nondir_file_uri (
+   uri, **type!, **srcpath!, **uri!, **uri_basepath!, **uri_filepath!
+) {
+   parse_file_uri "${@}" || return ${?}
+
+   if check_file_uri_type_dir_only "${type}"; then
+      ewarn "file uri references a directory: ${uri}"
+      return 2
+   fi
 
    return 0
 }

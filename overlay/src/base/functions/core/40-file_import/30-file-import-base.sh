@@ -148,11 +148,13 @@ _import_file_do_import() {
    return 0
 }
 
+## int _import_file_parse_uri ( destdir, src_uri, dst_relpath:= )
+##
 _import_file_parse_uri() {
    #"global" rc
    [ -n "${1-}" ] || return @@EX_USAGE@@
 
-   if retlatch parse_file_uri "${2-}"; then
+   if retlatch parse_nondir_file_uri "${2-}"; then
       ewarn "failed to parse file uri: ${rc}" import_file
       return ${rc}
    fi

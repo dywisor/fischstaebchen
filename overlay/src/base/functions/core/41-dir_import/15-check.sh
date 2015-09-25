@@ -33,7 +33,7 @@ import_to_dir_check_variant_supported() {
          if [ -n "${2-}" ]; then
 
             if [ -h "${2}" ] || [ ! -d "${2}" ]; then
-               @@_QPRINT@@ "@@_MSGPRE@@: ${1}: src is not a real dir: ${2}"
+               @@_QPRINT@@ "@@_MSGPRE@@${1}: src is not a real dir: ${2}"
                return @@EX_NOT_SUPPORTED@@
             fi
 
@@ -45,7 +45,7 @@ import_to_dir_check_variant_supported() {
 
          # %src may be a symlink (gets derefenced when copying) (must exist)
          if [ -n "${2-}" ] && [ ! -d "${2}" ]; then
-            @@_QPRINT@@ "@@_MSGPRE@@: ${1}: src is not a dir: ${2}"
+            @@_QPRINT@@ "@@_MSGPRE@@${1}: src is not a dir: ${2}"
             return @@EX_NOT_SUPPORTED@@
          fi
       ;;
@@ -55,7 +55,7 @@ import_to_dir_check_variant_supported() {
 
          # %src may be a symlink (gets dereferenced when copying) (must exist)
          if [ -n "${2-}" ] && [ ! -f "${2}" ]; then
-            @@_QPRINT@@ "@@_MSGPRE@@: ${1}: src is not a file: ${2}"
+            @@_QPRINT@@ "@@_MSGPRE@@${1}: src is not a file: ${2}"
             return @@EX_NOT_SUPPORTED@@
          fi
       ;;
@@ -64,7 +64,31 @@ import_to_dir_check_variant_supported() {
          v0=symlink
 
          if [ -n "${2-}" ] && [ ! -e "${2}" ]; then
-            @@_QPRINT@@ "@@_MSGPRE@@: ${1}: src does not exist: ${2}"
+            @@_QPRINT@@ "@@_MSGPRE@@${1}: src does not exist: ${2}"
+            return @@EX_NOT_SUPPORTED@@
+         fi
+      ;;
+
+      git)
+         if check_git_supported; then
+            v0=git
+
+<% if PARANOID= %>
+            if [ -n "${2-}" ] && ! check_git_uri_valid "${2}"; then
+               @@_QPRINT@@ "@@_MSGPRE@@${1}: bad git uri: ${2}"
+               return @@EX_NOT_SUPPORTED@@
+            fi
+<% else %>
+            case "${2-}" in
+               ::*)
+                  @@_QPRINT@@ "@@_MSGPRE@@${1}: bad git uri: ${2}"
+                  return @@EX_NOT_SUPPORTED@@
+               ;;
+            esac
+<% endif %>
+
+         else
+            @@_QPRINT@@ "@@_MSGPRE@@${1}: not available"
             return @@EX_NOT_SUPPORTED@@
          fi
       ;;

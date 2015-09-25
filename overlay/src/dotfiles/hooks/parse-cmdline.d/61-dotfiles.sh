@@ -7,8 +7,10 @@
 parse_dotfiles__zap() {
    CMDLINE_DOTFILES_TBT_SRC_URI=
 
-   :> "${DOTFILES_SRC_LIST_FILE:?}.in" || \
-      die "Failed to empty dotfiles src list!"
+   {
+      :> "${DOTFILES_SRC_LIST_FILE:?}.in.file" && \
+      :> "${DOTFILES_SRC_LIST_FILE:?}.in.git"
+   } || die "Failed to empty dotfiles src list!"
 }
 
 parse_dotfiles__zap
@@ -34,8 +36,16 @@ parse_dotfiles() {
             parse_dotfiles__zap
 
          elif preparse_file_uri_verbose "${value}"; then
-            printf '%s\n' "${uri}" >> "${DOTFILES_SRC_LIST_FILE}.in" || \
-               die "Failed to write dotfiles src list!"
+            case "${type}" in
+               git)
+                  printf '%s\n' "${uri}" >> "${DOTFILES_SRC_LIST_FILE}.in.git" || \
+                     die "Failed to write dotfiles src list!"
+               ;;
+               *)
+                  printf '%s\n' "${uri}" >> "${DOTFILES_SRC_LIST_FILE}.in.file" || \
+                     die "Failed to write dotfiles src list!"
+               ;;
+            esac
 
          else
             die "Could not parse file uri: ${value}"

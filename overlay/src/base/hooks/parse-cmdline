@@ -101,9 +101,8 @@ parse_remux_key() {
    return 1
 }
 
-arg_is_file_uri() {
+_arg_is_file_uri() {
    <%%retvar v0 %>
-   <%%locals type srcpath uri %>
 
    if preparse_file_uri "${1#file=}"; then
       # for cmdline args, file= is the generic prefix for specifying a file
@@ -120,6 +119,25 @@ arg_is_file_uri() {
 
    v0=
    return 1
+}
+
+arg_is_file_uri() {
+   <%%locals type srcpath uri %>
+   _arg_is_file_uri "${@}"
+}
+
+arg_is_real_file_uri() {
+   <%%locals type srcpath uri %>
+   _arg_is_file_uri "${@}" || return ${?}
+
+   if check_file_uri_type_dir_only "${type}"; then
+      #ewarn "invalid file uri (references a directory): ${1}"
+      die "invalid file uri (references a directory): ${1}"
+      v0='!INVALID'
+      return 0
+   fi
+
+   return 0
 }
 
 do_parse_cmdline() {

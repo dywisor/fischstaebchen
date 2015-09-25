@@ -9,14 +9,8 @@ ishare_add_flag want-dotfiles-import
 :> "${DOTFILES_SRC_LIST_FILE:?}" || \
    die "Failed to initialize dotfiles config!"
 
-[ -s "${DOTFILES_SRC_LIST_FILE}.in" ] || return 0
 
-if grep -v -- "^\S+${TARBALL_FILEEXT_RE}\$" \
-   "${DOTFILES_SRC_LIST_FILE}"
-then
-   die "bad dotfiles config."
-fi
-
+if [ -s "${DOTFILES_SRC_LIST_FILE}.in.file" ]; then
 {
 awk \
 -v tre="${TARBALL_FILEEXT_RE:?}" \
@@ -31,8 +25,17 @@ awk \
 
 (!ok) { printf("bad dotfiles uri: %s\n",$1) > "/dev/stderr"; exit 9; }
 { printf("%s ",t); print; }
-' "${DOTFILES_SRC_LIST_FILE}.in"
-} > "${DOTFILES_SRC_LIST_FILE}" || die "Failed to create dotfiles config!"
+' "${DOTFILES_SRC_LIST_FILE}.in.file"
+} >> "${DOTFILES_SRC_LIST_FILE}" || die "Failed to add files to dotfiles config!"
 
+fi
 
-autodie rm -- "${DOTFILES_SRC_LIST_FILE:?}.in"
+if [ -s "${DOTFILES_SRC_LIST_FILE}.in.git" ]; then
+   sed -e 's=^=git =' \
+      < "${DOTFILES_SRC_LIST_FILE}.in.git" \
+      >> "${DOTFILES_SRC_LIST_FILE}" || \
+      die "Failed to add git repos to dotfiles config!"
+fi
+
+autodie rm -- "${DOTFILES_SRC_LIST_FILE:?}.in.file"
+autodie rm -- "${DOTFILES_SRC_LIST_FILE:?}.in.git"

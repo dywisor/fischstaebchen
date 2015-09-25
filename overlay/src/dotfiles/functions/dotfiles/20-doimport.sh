@@ -43,9 +43,25 @@ _dotfiles_do_import__any() {
    autodie mkdir -- "${dstdir}"
    printf '%s\n' "${2}" > "${dstdir}/src_uri" || die "#src_uri"
 
-   autodie mkdir -- "${tmpdir}"
-   ( _dotfiles_import_from_${1} "${2}" "${4-}"; ) && fail=0 || fail=${?}
-   autodie rm -r -- "${tmpdir}"
+   case "${1}" in
+      tarball)
+         autodie mkdir -- "${tmpdir}"
+         ( _dotfiles_import_from_${1} "${2}" "${4-}"; ) && fail=0 || fail=${?}
+         autodie rm -r -- "${tmpdir}"
+      ;;
+<% if PARANOID= %>
+      symlink)
+         eerror "BUG: _dotfiles_do_import__any() called with type=${1}"
+         return @@EX_SOFTWARE@@
+      ;;
+<% endif %>
+      *)
+         ## import_to_dir_nonfatal ( variant, src_relpath, src, dst, name:= )
+         ##  src_relpath is only used for symlinking
+         import_to_dir_nonfatal \
+            "${1}" "" "${2}" "${dstdir}/src" "${3}" && fail=0 || fail=${?}
+      ;;
+   esac
 
    return ${fail}
 }
@@ -117,7 +133,7 @@ dotfiles_import() {
             @@NOP@@
          ;;
 
-         tarball)
+         git|tarball)
             autodie _dotfiles_do_import__dotfiles \
                "${src_type}" "${src_uri}" "${index}"
             <%% inc index %>

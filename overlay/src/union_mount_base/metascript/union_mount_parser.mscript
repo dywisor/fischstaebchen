@@ -119,7 +119,7 @@ __parse_@F@() {
                      true
                   ;;
                   *)
-                     if arg_is_file_uri "${v0}"; then
+                     if arg_is_real_file_uri "${v0}"; then
                         @V@_FILE="${v0}"
                      fi
                   ;;
@@ -163,7 +163,7 @@ __parse_@F@() {
             ;;
 
             overlay=*)
-               if ! arg_is_file_uri "${1#*=}"; then
+               if ! arg_is_real_file_uri "${1#*=}"; then
                   true
                elif [ -z "${@V@_OVERLAY_FILES-}" ]; then
                   @V@_OVERLAY_FILES="${v0}"
@@ -179,7 +179,7 @@ __parse_@F@() {
             ;;
 
             low_tarball=*|ltb=*)
-               if ! arg_is_file_uri "${1#*=}"; then
+               if ! arg_is_real_file_uri "${1#*=}"; then
                   true
                elif [ -z "${@V@_TARBALL_LOWLAYER_FILES-}" ]; then
                   @V@_TARBALL_LOWLAYER_FILES="${v0}"
@@ -195,7 +195,7 @@ __parse_@F@() {
             ;;
 
             tarball=*|tb=*)
-               if ! arg_is_file_uri "${1#*=}"; then
+               if ! arg_is_real_file_uri "${1#*=}"; then
                   true
                elif [ -z "${@V@_TARBALL_FILES-}" ]; then
                   @V@_TARBALL_FILES="${v0}"
@@ -266,7 +266,7 @@ __parse_@F@() {
 
             ## (implicit) file uri?
             *)
-               if arg_is_file_uri "${1}"; then
+               if arg_is_real_file_uri "${1}"; then
                   @V@_FILE="${v0}"
                fi
             ;;

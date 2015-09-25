@@ -12,6 +12,7 @@
 ##    (check with import_to_dir_check_variant_supported())
 ##
 _do_import_to_dir() {
+   <%%locals git_uri git_checkout %>
    <%%locals !\
       | variant=${1:?} name=${2:?} src_relpath=${3?} !\
       | src=${4:?} dst=${5:?} dst_bak=${6-} %>
@@ -79,6 +80,17 @@ _do_import_to_dir() {
 
       untar)
          @@DBGTRACE_CMD@@@@PROG_UNTAR@@ -C "${dst}" "${src}" || return
+      ;;
+
+      git)
+         if ! split_git_uri "${src}"; then
+            eerror "BUG in _do_import_to_dir(): invalid git uri: ${src}"
+            return @@EX_SOFTWARE@@
+         fi
+
+         ## FIXME: default upstream branch is not necessarily master
+         @@DBGTRACE_FUNC@@git_repo_update \
+            "${git_uri}" "${dst}" "${git_checkout:-master}" || return
       ;;
 
       *)
