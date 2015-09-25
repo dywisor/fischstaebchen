@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include "config.h"
 
@@ -135,5 +136,13 @@
         } \
     } while (0)
 
+
+#define X_PRESERVE_ERRNO_AS(bak_varname, code)  \
+    do { \
+        const int bak_varname = errno; \
+        code; \
+    } while (0)
+
+#define X_PRESERVE_ERRNO(...)  X_PRESERVE_ERRNO_AS(esav, __VA_ARGS__)
 
 #endif /* _COMMON_MAC_H_ */
