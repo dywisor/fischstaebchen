@@ -8,16 +8,17 @@
 #ifndef _COMMON_CONFIG_H_
 #define _COMMON_CONFIG_H_
 
+/* load LOCALCONFIG */
+#ifdef LOCALCONFIG
 #define __get_header(h) #h
 #define _get_header(h)  __get_header(h)
 
-#ifdef LOCALCONFIG
 #define __LOCALCONFIG _get_header(LOCALCONFIG)
 #include __LOCALCONFIG
-#endif
 
 #undef _get_header
 #undef __get_header
+#endif
 
 /* feature selection */
 #ifdef DISABLE_BUSYBOX
@@ -111,8 +112,16 @@
 #endif
 
 
+/* load POST_LOCALCONFIG */
 #ifdef POST_LOCALCONFIG
-#include #POST_LOCALCONFIG
+#define __get_header(h) #h
+#define _get_header(h)  __get_header(h)
+
+#define __POST_LOCALCONFIG _get_header(POST_LOCALCONFIG)
+#include __POST_LOCALCONFIG
+
+#undef _get_header
+#undef __get_header
 #endif
 
 enum {
