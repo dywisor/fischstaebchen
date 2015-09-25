@@ -39,6 +39,8 @@ BB             = ${{BB:-{BUSYBOX}}}
 BB_APPLET      = {BB}
 XSHELL         = {BUSYBOX} sh
 
+PROG_GIT       = git
+
 
 IHOOK          = ${{IHOOK:?}}
 ISHARE_HOOKS   = ${{ISHARE_HOOKS:?}}
