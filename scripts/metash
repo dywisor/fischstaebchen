@@ -1271,6 +1271,8 @@ class ShellMacros ( object ):
                   except ValueError:
                      q = '"'
             else:
+               # any "false" value should result in an empty str
+               vardef['value'] = ""
                q = ''
 
             var_init_code.append (
