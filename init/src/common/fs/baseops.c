@@ -18,6 +18,23 @@
 #include "../mac.h"
 
 
+static int _check_fs_access_and_type_and_imauser_or_mode (
+   const int         access_mode,
+   const mode_t      type,
+   const mode_t      mode,
+   const char* const fspath
+) {
+   struct stat sb;
+
+   if      ( access ( fspath, access_mode )  != 0 ) { return 1; }
+   else if ( stat ( fspath, &sb )            != 0 ) { return 2; }
+   else if ( ((sb.st_mode & S_IFMT) & type)  == 0 ) { return 3; }
+   else if ( getuid()                        != 0 ) { return 0; }
+   else if ( (sb.st_mode & mode)             == 0 ) { return 4; }
+   else                                             { return 0; }
+}
+
+
 int check_fs_lexists ( const char* const fspath ) {
    struct stat stat_info;
 
@@ -28,8 +45,29 @@ int check_fs_exists ( const char* const fspath ) {
    return access ( fspath, F_OK );
 }
 
+int check_fs_executable ( const char* const fspath ) {
+   return _check_fs_access_and_type_and_imauser_or_mode (
+      X_OK, ~0, X_ALL, fspath
+   );
+}
+
+int check_fs_readable ( const char* const fspath ) {
+   return _check_fs_access_and_type_and_imauser_or_mode (
+      R_OK, ~0, R_ALL, fspath
+   );
+}
+
 int check_fs_writable ( const char* const fspath ) {
-   return access ( fspath, W_OK );
+   return _check_fs_access_and_type_and_imauser_or_mode (
+      W_OK, ~0, W_ALL, fspath
+   );
+}
+
+int check_fs_exefile ( const char* const fspath ) {
+   /* uses stat(), not lstat() */
+   return _check_fs_access_and_type_and_imauser_or_mode (
+      X_OK, S_IFREG, X_ALL, fspath
+   );
 }
 
 int check_dir_exists ( const char* const fspath ) {
@@ -37,7 +75,7 @@ int check_dir_exists ( const char* const fspath ) {
 
    if ( stat ( fspath, &stat_info ) != 0 ) { return -1; }
 
-   return ( stat_info.st_mode & S_IFDIR ) ? 0 : 1;
+   return S_ISDIR(stat_info.st_mode) ? 0 : 1;
 }
 
 
