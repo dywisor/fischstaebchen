@@ -61,7 +61,7 @@
 #pragma GCC diagnostic pop
 
 #define x_free(ptr)   DO_ONCE ( \
-   { if ( ptr == NULL ) { free(ptr); ptr = NULL; } } )
+   { if ( ptr != NULL ) { free(ptr); ptr = NULL; } } )
 #else
 #define x_free(ptr)   DO_ONCE ( { free(ptr); ptr = NULL; } )
 #endif
