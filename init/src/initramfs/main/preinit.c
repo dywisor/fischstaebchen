@@ -40,6 +40,10 @@ int main ( int UNUSED(argc), char** UNUSED(argv) ) {
 
    if ( default_initramfs_start() != 0 ) { return EXIT_FAILURE; }
 
+   if ( initramfs_waitfor_disk_devices() != 0 ) {
+      return initramfs_run_onerror_shell ( -1, "Failed to wait for disk devices." );
+   }
+
    if ( initramfs_mount_newroot() != 0 ) { return EXIT_FAILURE; }
 
    if (

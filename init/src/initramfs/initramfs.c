@@ -37,8 +37,6 @@ static int _default_initramfs_start (void) {
 
    if ( initramfs_run_user_shell_if_requested() != 0 )   { return -1; }
 
-   if ( initramfs_waitfor_disk_devices() != 0 )          { return -1; }
-
    return 0;
 }
 

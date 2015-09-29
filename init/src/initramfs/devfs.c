@@ -28,14 +28,6 @@
 #include "config.h"
 #include "devfs.h"
 
-static int _initramfs_wait_for_disk__lvm (
-   const unsigned timeout_decisecs, const char* const devpath
-);
-
-static int _initramfs_wait_for_disk__mdadm (
-   const unsigned timeout_decisecs, const char* const devpath
-);
-
 static int _initramfs_wait_for_disk__dev (
    const unsigned timeout_decisecs, const char* const devpath,
    const char* const name
@@ -44,58 +36,6 @@ static int _initramfs_wait_for_disk__dev (
 static int _initramfs_wait_for_disk__label_or_uuid (
    const unsigned timeout_decisecs, const char* const disk_spec
 );
-
-
-
-static int initramfs_scan_lvm (void) {
-/*
-   if ( access ( GET_SYSFS_PATH("/class/misc/device-mapper"), F_OK ) != 0 ) {
-      if ( initramfs_modprobe ( 0, "dm-mod" ) != 0 ) { return -1; }
-   }
-*/
-
-/*
-   if ( access ( GET_DEVFS_PATH("/mapper/control"), F_OK ) != 0 ) {
-      return -1;
-   }
-*/
-
-   initramfs_info ( "%s", "\n", "Scanning for volume groups" );
-
-   makedirs ( "/etc/lvm/cache" );
-   run_command ( NULL, "vgscan", "--mknodes", "--cache" ); /* retcode ignored */
-   return run_command ( NULL, "vgchange", "-a", "-y" );
-}
-
-static int initramfs_scan_mdadm ( const char* const uuid ) {
-   int retcode;
-   char* vbuf;
-
-   if ( STR_IS_EMPTY(uuid) ) {
-      initramfs_info ( "%s", "\n", "Scanning for software raid arrays" );
-      retcode = run_command ( NULL, "mdadm", "--assemble", "--scan" );
-
-   } else {
-      if ( asprintf ( &vbuf, "--uuid=%s", uuid ) != 0 ) {
-         /* content of vbuf is undefined, possible memleak */
-         /* FIXME: POSSIBLE MEMLEAK */
-         return -1;
-      }
-
-      initramfs_info (
-         "Scanning for software raid array with uuid '%s'", "\n", uuid
-      );
-      retcode = run_command ( NULL, "mdadm", "--assemble", "--scan", vbuf );
-      x_free ( vbuf );
-   }
-
-   if ( retcode ) {
-      initramfs_warn ( "mdadm --assemble failed (rc=%d)", "\n", retcode );
-   }
-
-   return retcode;
-}
-
 
 
 int initramfs_wait_for_disk (
@@ -124,11 +64,11 @@ int initramfs_wait_for_disk (
 
       if ( (val = str_startswith ( rem, "vg" )) != NULL ) {
          /* LVM */
-         return _initramfs_wait_for_disk__lvm ( timeout_decisecs, disk );
+         return -1;
 
       } else if ( (val = str_startswith ( rem, "md" )) != NULL ) {
          /* mdadm */
-         return _initramfs_wait_for_disk__mdadm ( timeout_decisecs, disk );
+         return -1;
 
       } else if ( strchr ( rem, '/' ) != NULL ) {
          /* not a device node we could handle here */
@@ -156,21 +96,7 @@ int initramfs_wait_for_disk (
 }
 
 
-static int _initramfs_wait_for_disk__lvm (
-   const unsigned UNUSED(timeout_decisecs), const char* const devpath
-) {
-   initramfs_scan_lvm();
-   return access ( devpath, F_OK );
-}
 
-
-static int _initramfs_wait_for_disk__mdadm (
-   const unsigned UNUSED(timeout_decisecs), const char* const devpath
-) {
-   initramfs_scan_mdadm ( NULL );
-   mdev_run_scan();
-   return access ( devpath, F_OK );
-}
 
 
 static int _initramfs_wait_for_disk__dev (

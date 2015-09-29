@@ -127,6 +127,9 @@ static int main_init (void) {
    /* phase-out devfs setup */
    IRUN_CRITICAL_HOOK ( "devfs-setup" );
 
+   /* wait for disk devices (could be done after networking)  */
+   IRUN ( "wait for disk devices", initramfs_waitfor_disk_devices() );
+
    /* phase-out net-setup */
    IRUN_CRITICAL_HOOK ( "net-setup" );
 
