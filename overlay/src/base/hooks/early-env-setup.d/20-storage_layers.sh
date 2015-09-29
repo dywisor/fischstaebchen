@@ -1,0 +1,9 @@
+## Copyright (c) 2014-2015 André Erdmann <dywi@mailerd.de>
+##
+## Distributed under the terms of the MIT license.
+## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
+##
+
+autodie ishare_add_flag storage-use-mdadm
+autodie ishare_add_flag storage-use-lvm
+autodie ishare_add_flag storage-use-bcache
