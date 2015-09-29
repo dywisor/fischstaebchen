@@ -52,7 +52,7 @@ int default_initramfs_start (void) {
       retcode = initramfs_run_onerror_shell ( retcode, NULL );
    }
 
-   return 0;
+   return retcode;
 }
 
 
