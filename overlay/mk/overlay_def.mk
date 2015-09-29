@@ -7,6 +7,7 @@ OVERLAY_SETUP_ENV += OVERLAY_HOOKDIR='$(OVERLAY_HOOKDIR_REL)'
 OVERLAY_SETUP_ENV += OVERLAY_FUNCTIONS_FILE='$(OVERLAY_FUNCTIONSFILE_REL)'
 OVERLAY_SETUP_ENV += OVERLAY_O_FUNCTIONS_DIR='$(OVERLAY_O_FUNCTIONS_DIR)'
 OVERLAY_SETUP_ENV += OVERLAY_ENV_FILE='$(OVERLAY_ENVFILE_REL)'
+##OVERLAY_SETUP_ENV += OVERLAY_SCRIPTS_DIR='$(OVERLAY_SCRIPTS_DIR_REL)'
 OVERLAY_SETUP_ENV += OVERLAY_O_WANTSED='$(OVERLAY_O_WANTSED)'
 OVERLAY_SETUP_ENV += WANTSED='>> $(OVERLAY_O_WANTSED) printf "%s\n"'
 OVERLAY_SETUP_ENV += RUN_METASH='$(RUN_METASH)'
@@ -20,6 +21,7 @@ $(OVERLAY_O): FORCE | _basedep_clean
 		$(OVERLAY_O_INITDIR) \
 		$(OVERLAY_O_METASCRIPTDIR) \
 		$(OVERLAY_O_HOOKDIR) \
+		$(OVERLAY_O_SCRIPTS_DIR) \
 		$(addprefix $(OVERLAY_O_FUNCTIONS_DIR)/,src combined) \
 		$(dir $(OVERLAY_O_FUNCTIONS_FILE)) \
 		$(OVERLAY_O_ENVFILES_DIR)/src \
@@ -72,6 +74,12 @@ $(O)/.stamp_overlay_hooks_$(2): \
 	$$(call f_copy_tree_ifexist,$$(<)/static/hooks,$(OVERLAY_O_HOOKDIR))
 	touch '$$(@)'
 
+$(O)/.stamp_overlay_scripts_$(2): \
+	$(O)/.stamp_overlay_scripts_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
+
+	$$(call f_copy_tree_ifexist,$$(<)/static/scripts,$(OVERLAY_O_SCRIPTS_DIR))
+	touch '$$(@)'
+
 else
 $(O)/.stamp_overlay_env_$(2): \
 	$(O)/.stamp_overlay_env_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
@@ -109,6 +117,25 @@ $(O)/.stamp_overlay_hooks_$(2): \
 
 	touch '$$(@)'
 
+$(O)/.stamp_overlay_scripts_$(2): \
+	$(O)/.stamp_overlay_scripts_%: $(OVERLAY_$(1)_SRCDIR) | $(OVERLAY_O) _basedep_clean
+
+	$$(call f_metash_do_build,\
+		$(OVERLAY_O_TMPROOT)/$$(*)/scripts,\
+		$$(<)/scripts,\
+		$(OVERLAY_O_SCRIPTS_DIR))
+
+	{ \
+		find \
+			$(OVERLAY_O_TMPROOT)/$$(*)/scripts \
+			-type f -print0 \
+				| xargs -0 -r -n 1 basename \
+				| sed -e 's%^%$(OVERLAY_SCRIPTS_DIR_REL:/=)/%' \
+		; \
+	} >> '$(OVERLAY_O_WANTSED)'
+
+	touch '$$(@)'
+
 endif
 
 
@@ -116,6 +143,7 @@ $(O)/.stamp_overlay_$(2): \
 	$(O)/.stamp_overlay_%: \
 		$(OVERLAY_$(1)_SRCDIR) $(OVERLAY_O) \
 		$(O)/.stamp_overlay_metascript_$(2) \
+		$(O)/.stamp_overlay_scripts_$(2) \
 		$(O)/.stamp_overlay_functions_$(2) \
 		$(O)/.stamp_overlay_hooks_$(2) \
 		$(O)/.stamp_overlay_env_$(2) | _basedep_clean
