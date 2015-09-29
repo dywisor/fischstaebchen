@@ -34,7 +34,9 @@ setver:
 	printf '%s\n' '$(VER)' > '$(__PRJROOT)/VERSION'
 	$(X_GIT) -C '$(__PRJROOT)' add    './VERSION' && \
 	$(X_GIT) -C '$(__PRJROOT)' commit './VERSION' \
-		-m 'fischstaebchen $(VER)' -e
+		-m 'fischstaebchen $(VER)' -e && \
+	$(X_GIT) -C '$(__PRJROOT)' tag 'v$(VER)'
+
 endif
 
 
