@@ -55,7 +55,7 @@ case "${net_iftype}" in
    ;;
 
    *)
-      die "unsupport net_iftype: ${net_iftype}"
+      die "unsupported net_iftype: ${net_iftype}"
    ;;
 esac
 
