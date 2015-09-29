@@ -235,6 +235,7 @@ int zram_disk_simple (
    const char* const size_spec,
    const size_t sys_memsize_m
 ) {
+   int ret;
    struct zram_disk_config zdisk;
 
    if ( zram_disk_config_init ( &zdisk, name ) != 0 ) { return -1; }
@@ -242,13 +243,15 @@ int zram_disk_simple (
    if (
       zram_disk_config_set_size ( &zdisk, size_spec, 0, sys_memsize_m ) != 0
    ) {
-      return -1;
-   }
+      ret = -1;
 
+   } else if ( mp == NULL ) {
+      ret = zram_disk_do_setup ( &zdisk, NULL );
 
-   if ( mp == NULL ) {
-      return zram_disk_do_setup ( &zdisk, NULL );
    } else {
-      return zram_disk_do_setup_and_mount ( &zdisk, mp, MS_RELATIME );
+      ret = zram_disk_do_setup_and_mount ( &zdisk, mp, MS_RELATIME );
    }
+
+   zram_disk_config_free ( &zdisk );
+   return ret;
 }
