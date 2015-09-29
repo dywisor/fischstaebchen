@@ -46,11 +46,8 @@ static int _initramfs_wait_for_disk__label_or_uuid (
 );
 
 
-int initramfs_scan_bcache (void) {
-   return -1;
-}
 
-int initramfs_scan_lvm (void) {
+static int initramfs_scan_lvm (void) {
 /*
    if ( access ( GET_SYSFS_PATH("/class/misc/device-mapper"), F_OK ) != 0 ) {
       if ( initramfs_modprobe ( 0, "dm-mod" ) != 0 ) { return -1; }
@@ -70,7 +67,7 @@ int initramfs_scan_lvm (void) {
    return run_command ( NULL, "vgchange", "-a", "-y" );
 }
 
-int initramfs_scan_mdadm ( const char* const uuid ) {
+static int initramfs_scan_mdadm ( const char* const uuid ) {
    int retcode;
    char* vbuf;
 
