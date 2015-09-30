@@ -145,7 +145,7 @@ esac
 if [ ${#} -eq 0 ]; then
     : "${FORCE_DISK_SYMLINK_CREATION:=n}"
 
-    for sysfs_blockdev in /sys/block/*; do
+    for sysfs_blockdev in /sys/class/block/*; do
         if [ -e "${sysfs_blockdev}" ]; then
             dev_name="${sysfs_blockdev##*/}"
             dev="/dev/${dev_name}"
