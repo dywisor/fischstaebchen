@@ -90,7 +90,7 @@ if [ "${have_lvm}" = "y" ]; then
     then
         einfo "Scanning for volume groups"
 
-        vgchange -a -y || \
+        vgchange -a y || \
             ewarn "Failed to scan for volume groups!"
     else
         ewarn "Failed to initialize lvm"
