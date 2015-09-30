@@ -82,7 +82,7 @@ create_disk_id_links() {
     case "${2:?}" in
         [sh]d*[a-z]*)
             # sda, ..., sdX, sdaa, ..., sdXY, ...
-            part_suffix="${1#[sh]d*[a-z]}"
+            part_suffix="${2#[sh]d*[a-z]}"
             [ -z "${part_suffix}" ] || part_suffix="-part${part_suffix}"
         ;;
 
