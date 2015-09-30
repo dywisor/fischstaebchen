@@ -43,5 +43,8 @@ ENHANCEMENT     init: when bind-mounting from volatile storage, create necessary
 
 WTF             file descriptor 3 passed to overlay hooks needs to be documented
 BROKEN          latest buildroot-based builds:
-                "vgscan --mknodes" and "vgchange" segfault in my testing vm,
-                check:: incomplete /dev setup?, lvm2?, kernel config?
+                vgmknodes segfaults w/ lvm2 2.02.130, 2.02.132.
+                Last known-to-work version is 2.02.125.
+                Downgraded to that for now, needs further investigation.
+TODO            buildroot: dropbear config dir symlinked to [/var]/run/dropbear,
+                remove/replace "-h /etc/dropbear" hackery in start-dropbear
