@@ -79,4 +79,9 @@
 #define LD_SO_CONFIG_FILE  "/etc/ld.so.conf"
 #endif
 
+
+#ifndef INITRAMFS_DEFAULT_UMASK
+#define INITRAMFS_DEFAULT_UMASK  (S_IWGRP | S_IWOTH)
+#endif
+
 #endif /* _INITRAMFS_CONFIG_H_ */

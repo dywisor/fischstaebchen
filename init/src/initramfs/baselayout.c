@@ -63,7 +63,7 @@ static int  _initramfs_baselayout_read_cmdline (void);
 
 int initramfs_baselayout (void) {
 
-   umask(0);
+   umask ( INITRAMFS_DEFAULT_UMASK );
    export_env ( "PATH", DEFAULT_PATH );
 
    if ( _initramfs_baselayout_basemounts() != 0 ) { return EX_OSERR; }
