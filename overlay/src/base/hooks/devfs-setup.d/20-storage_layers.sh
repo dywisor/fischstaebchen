@@ -31,7 +31,7 @@ fi
 
 
 _scan_bcache() {
-    <%%locals major minor blocks name BOGUS fail=0 %>
+    <%%locals major minor blocks name BOGUS %>
 
     [ -r /proc/partitions ] || return 1
 
@@ -42,11 +42,9 @@ _scan_bcache() {
             [ -b "/dev/${name}" ]
         then
             printf '%s\n' "/dev/${name}" \
-                > /sys/fs/bcache/register_quiet || fail=1
+                > /sys/fs/bcache/register_quiet || @@NOP@@
         fi
     done < /proc/partitions
-
-    return ${fail}
 }
 
 scan_bcache() {
@@ -70,8 +68,17 @@ if [ "${have_mdadm}" = "y" ]; then
             die "Failed to create /etc/mdadm.conf!"
     fi
 
-    mdadm --assemble --scan || \
-        ewarn "Failed to scan for software raid arrays!"
+    if retlatch \
+        mdadm --assemble --scan
+    then
+        @@NOP@@
+    elif [ ${rc} -eq 1 ]; then
+        ## mdadm returns 1 in case of "no arrays found"
+        @@NOP@@
+
+    else
+        ewarn "Failed to scan for software raid arrays! (rc=${rc})"
+    fi
 
     scan_bcache
 fi
@@ -79,7 +86,7 @@ fi
 if [ "${have_lvm}" = "y" ]; then
     if \
         dodir_nonfatal /etc/lvm/cache && \
-        vgscan --mknodes --create
+        3>&- vgscan --mknodes
     then
         einfo "Scanning for volume groups"
 
