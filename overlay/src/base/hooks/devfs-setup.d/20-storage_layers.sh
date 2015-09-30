@@ -4,6 +4,10 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
+hacks_dont_leak_fd3() {
+    { "${@}"; } 3>&-
+}
+
 have_bcache=n
 if ishare_has_flag storage-use-bcache; then
     if [ -e /sys/fs/bcache/register_quiet ]; then
@@ -71,30 +75,36 @@ if [ "${have_mdadm}" = "y" ]; then
     if retlatch \
         mdadm --assemble --scan
     then
-        @@NOP@@
-    elif [ ${rc} -eq 1 ]; then
-        ## mdadm returns 1 in case of "no arrays found"
-        @@NOP@@
+        if [ ${rc} -eq 1 ]; then
+            ## mdadm returns 1 in case of "no arrays found"
+            veinfo "Did not find any software raid array"
+        else
+            ewarn "Failed to scan for software raid arrays! (rc=${rc})"
+        fi
 
     else
-        ewarn "Failed to scan for software raid arrays! (rc=${rc})"
+        veinfo "Found software raid arrays"
     fi
 
     scan_bcache
 fi
 
 if [ "${have_lvm}" = "y" ]; then
+    einfo "Scanning for volume groups"
+
     if \
         dodir_nonfatal /etc/lvm/cache && \
-        3>&- vgscan --mknodes
+        hacks_dont_leak_fd3 vgscan --mknodes && \
+        hacks_dont_leak_fd3 vgchange -a y
     then
-        einfo "Scanning for volume groups"
-
-        vgchange -a y || \
-            ewarn "Failed to scan for volume groups!"
+        @@NOP@@
     else
-        ewarn "Failed to initialize lvm"
+        ewarn "Failed to scan for volume groups!"
     fi
 
+    ## <partial success?>
     scan_bcache
 fi
+
+## don't leak scan_bcache retcode
+@@NOP@@
