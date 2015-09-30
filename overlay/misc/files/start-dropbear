@@ -13,7 +13,34 @@ ssd_dropbear() {
 }
 
 dropbear_prepare_fs() {
-   mkdir -p -- /etc/dropbear /var/log /run || return
+   local s
+
+   mkdir -p -- /var/log /run || return
+
+   if [ -d /etc/dropbear/. ]; then
+      :
+
+   elif [ -h /etc/dropbear ]; then
+      s="$(readlink /etc/dropbear)" && [ -n "${s}" ] || return
+
+      case "${s}" in
+         /*) : ;;
+         *)  s="/etc/dropbear/${s}" ;;
+      esac
+
+      if [ -h "${s}" ]; then
+         return 2
+      else
+         mkdir -p -- "${s}" || return
+      fi
+
+   elif [ -e /etc/dropbear ]; then
+      return 1
+
+   else
+      mkdir -p -- /etc/dropbear || return
+   fi
+
 
    mkdir -p -- /root/.ssh && chmod 0700 /root/.ssh  || return
    if [ ! -e /root/.ssh/authorized_keys ]; then
