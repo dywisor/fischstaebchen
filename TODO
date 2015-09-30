@@ -11,6 +11,7 @@
 #                      (That usually means that I'd accept patches for it.)
 # * BROKEN        --  broken
 # * TESTING       --  needs further testing
+# * WTF           --  undefined behavior of any kind (lacks documentation, is just weird)
 #
 
 TODO            documentation.
@@ -40,3 +41,4 @@ ENHANCEMENT     no cryptsetup (luks), *cache, dmraid
 ENHANCEMENT     stagedive: write to disk
 ENHANCEMENT     init: when bind-mounting from volatile storage, create necessary dirs
 
+WTF             file descriptor 3 passed to overlay hooks needs to be documented
