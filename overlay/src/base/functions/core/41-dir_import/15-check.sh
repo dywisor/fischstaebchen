@@ -50,6 +50,17 @@ import_to_dir_check_variant_supported() {
          fi
       ;;
 
+      rsync)
+         ## rsync, meant for fetching files/dirs from remotes
+         ##   for local files, use "copy" because it's always available.
+         v0=rsync
+
+         if ! qwhich rsync; then
+            @@_QPRINT@@ "@@_MSGPRE@@${1}: rsync prog not available"
+            return @@EX_NOT_SUPPORTED@@
+         fi
+      ;;
+
       tar|untar)
          v0=untar
 

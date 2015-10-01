@@ -51,7 +51,8 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
       http://*|https://*|ftp://*|\
       cifs://*|smb://*|nfs://*|\
       github://*|gh://*|\
-      git://*|git+ssh://*)
+      git://*|git+ssh://*|\
+      rsync://*)
          type="${1%%://*}"
          srcpath="${1#*://}"
          alt_srcpath="${1}"
@@ -61,7 +62,8 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
       http=*|https=*|ftp=*|\
       cifs=*|smb=*|nfs=*|\
       github=*|gh=*|\
-      git=*)
+      git=*|\
+      rsync=*)
          type="${1%%=*}"
          srcpath="${1#*=}"
       ;;
@@ -132,7 +134,7 @@ int preparse_file_uri ( uri, **type!, **srcpath!, **uri! ) {
          uri="${type}://${srcpath#/}"
       ;;
 
-      git)
+      git|rsync)
          uri="${alt_srcpath:-${srcpath}}"
       ;;
 
@@ -173,6 +175,10 @@ int preparse_file_uri_verbose (...) {
 int check_file_uri_type_dir_only(type) {
    case "${1}" in
       git)
+         return 0
+      ;;
+      rsync)
+         ## rsync is dir-only for now.
          return 0
       ;;
    esac

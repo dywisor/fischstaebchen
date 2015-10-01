@@ -4,7 +4,10 @@
 ## (See LICENSE.MIT or http://opensource.org/licenses/MIT)
 ##
 
-## int _do_import_to_dir ( variant, name, src_relpath!e, src, dst, dst_bak:= )
+## int _do_import_to_dir (
+##    variant, name, src_relpath!e, src, dst, dst_bak:=,
+##    **IMPORT_DIR_RSYNC_OPTS=%IMPORT_DIR_DEFAULT_RSYNC_OPTS
+## )
 ##
 ##   %variant, %src_relpath, %src should be valid
 ##   (and, in case of %variant, also unaliased)
@@ -12,7 +15,7 @@
 ##    (check with import_to_dir_check_variant_supported())
 ##
 _do_import_to_dir() {
-   <%%locals git_uri git_checkout %>
+   <%%locals git_uri git_checkout opts %>
    <%%locals !\
       | variant=${1:?} name=${2:?} src_relpath=${3?} !\
       | src=${4:?} dst=${5:?} dst_bak=${6-} %>
@@ -28,7 +31,7 @@ _do_import_to_dir() {
             die "BUG: _do_import_to_dir(variant=${variant}) called with empty src_relpath"
          fi
       ;;
-      bind|bind_ro|copy|untar)
+      bind|bind_ro|copy|untar|git|rsync)
          @@NOP@@
       ;;
       *)
@@ -91,6 +94,16 @@ _do_import_to_dir() {
          ## FIXME: default upstream branch is not necessarily master
          @@DBGTRACE_FUNC@@git_repo_update \
             "${git_uri}" "${dst}" "${git_checkout:-master}" || return
+      ;;
+
+      rsync)
+         opts="-r ${IMPORT_DIR_RSYNC_OPTS-${IMPORT_DIR_DEFAULT_RSYNC_OPTS?}}"
+         ! __debug__ || opts="${opts} --progress --stats"
+
+         ## copy content of src into dst
+         ## so that src/A gets copied to dst/A (and not dst/src/A).
+         ## to realize this, append "/" to both src and dst
+         @@DBGTRACE_CMD@@rsync ${opts} "${src%/*}/" "${dst%/*}/" || return
       ;;
 
       *)

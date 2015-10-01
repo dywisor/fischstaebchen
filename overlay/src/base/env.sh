@@ -85,6 +85,10 @@ SQUASHFS_FILEEXT_LIST=".squashfs .sfs"
 TARBALL_FILEEXT_RE="[.](tar|tgz|txz|tbz2|tar[.](gz|xz|bz2|lzo))"
 SQUASHFS_FILEEXT_RE="[.](squashfs|sfs)"
 
+## default rsync options for import_to_dir()
+##  the following options are always passed to rsync: "-r"
+IMPORT_DIR_DEFAULT_RSYNC_OPTS="-lptgoDH"
+
 ##if [ -z "${ARCH-}" ]; then
 ##ARCH="$(uname -m @@NO_STDERR@@)"
 ##ALT_ARCH="${ARCH}"
