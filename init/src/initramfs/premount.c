@@ -46,7 +46,7 @@ static int _initramfs_newroot_premount_all ( const char* const fstab_file ) {
    initramfs_info (
       "Reading fstab file %s in no-filter mode", "\n", fstab_file
    );
-   return initramfs_premount_all ( NEWROOT_MOUNTPOINT, fstab_file );
+   return initramfs_premount_all_nofilter ( NEWROOT_MOUNTPOINT, fstab_file );
 }
 
 
