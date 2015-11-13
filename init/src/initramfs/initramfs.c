@@ -12,6 +12,7 @@
 #include "../common/mac.h"
 #include "../common/message.h"
 #include "../common/dynarray.h"
+#include "../common/decision_bool.h"
 #include "../common/misc/run_command.h"
 #include "../common/misc/env.h"
 #include "../common/fs/baseops.h"
@@ -185,7 +186,7 @@ int initramfs_waitfor_disk_devices (void) {
 
    if ( timeout < 1 ) { return 0; }
 
-   if ( initramfs_globals->want_newroot_mount ) {
+   if ( dbool_is_undef_true(initramfs_globals->want_newroot_mount) ) {
       disk = initramfs_globals->newroot_mount->source;
       /* MOUNT_CFG_IS_ENABLED: don't care */
 
@@ -253,63 +254,45 @@ int initramfs_autoswap (void) {
    return retcode;
 }
 
-int initramfs_mount_newroot_root (void) {
-   if ( initramfs_globals->want_newroot_mount == 0 ) { return 0; }
+static int _initramfs_mount_newroot_default (
+   const char* const mount_desc,
+   const DBOOL_TYPE want_flag,
+   struct mount_config* const p_mount
+) {
+   if ( dbool_is_false(want_flag) ) { return 0; }
 
-   if (
-      mount_config_is_enabled ( initramfs_globals->newroot_mount ) != 0
-   ) {
-      return 0;
-   }
-
+   if ( mount_config_is_enabled ( p_mount ) != 0 ) { return 0; }
 
    initramfs_info (
-      "Mounting newroot (%s)", "\n",
-      initramfs_globals->newroot_mount->source
+      "Mounting %s (%s)", "\n", mount_desc, p_mount->source
    );
 
-   if ( initramfs_domount ( initramfs_globals->newroot_mount ) != 0 ) {
-      initramfs_err ( "Failed to mount %s", "\n", "newroot" );
-      return initramfs_run_onerror_shell ( -1, "failed to mount newroot" );
+   if ( initramfs_domount ( p_mount ) != 0 ) {
+      initramfs_err ( "Failed to mount %s", "\n", mount_desc );
+      return initramfs_run_onerror_shell ( - 1, "Failed to mount" );
    }
 
    initramfs_info (
-      "Mounted newroot (%s)", "\n", initramfs_globals->newroot_mount->source
+      "Mounted %s (%s)", "\n", mount_desc, p_mount->source
    );
 
    return 0;
 }
 
+int initramfs_mount_newroot_root (void) {
+   return _initramfs_mount_newroot_default (
+      "newroot",
+      initramfs_globals->want_newroot_mount,
+      initramfs_globals->newroot_mount
+   );
+}
+
 int initramfs_mount_newroot_usr (void) {
-   if ( initramfs_globals->want_newroot_usr_mount != 0 ) { return 0; }
-
-   if (
-      mount_config_is_enabled ( initramfs_globals->newroot_usr_mount ) != 0
-   ) {
-      return 0;
-   }
-
-
-   initramfs_info (
-      "Mounting /usr in newroot (%s)", "\n",
-      initramfs_globals->newroot_usr_mount->source
+   return _initramfs_mount_newroot_default (
+      "/usr in newroot",
+      initramfs_globals->want_newroot_usr_mount,
+      initramfs_globals->newroot_usr_mount
    );
-
-   if (
-      initramfs_domount ( initramfs_globals->newroot_usr_mount ) != 0
-   ) {
-      initramfs_err ( "Failed to mount %s", "\n", "/usr in newroot" );
-      return initramfs_run_onerror_shell (
-        -1, "failed to mount /usr in newroot"
-      );
-   }
-
-   initramfs_info (
-      "Mounted /usr in newroot (%s)", "\n",
-      initramfs_globals->newroot_usr_mount->source
-   );
-
-   return 0;
 }
 
 int initramfs_mount_newroot (void) {

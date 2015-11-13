@@ -1,5 +1,6 @@
 ODEF_COMMON_ANY      += dynarray dynstr message
 ODEF_COMMON_ANY      += str_dynarray
+ODEF_COMMON_ANY      += decision_bool
 ODEF_COMMON_OBJECTS  +=
 ODEF_COMMON_HEADERS  += config message_defs mac
 ODEF_COMMON_HEADERS  += fs misc strutil

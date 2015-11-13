@@ -16,6 +16,7 @@
 
 #include "../common/message.h"
 #include "../common/dynarray.h"
+#include "../common/decision_bool.h"
 #include "../common/fs/mount_config.h"
 
 #include "config.h"
@@ -40,9 +41,9 @@ enum {
 
 
 struct initramfs_globals_type {
-   short                   root_ro_status;
-   short                   want_newroot_mount;
-   short                   want_newroot_usr_mount;
+   DBOOL_TYPE              root_ro_status;
+   DBOOL_TYPE              want_newroot_mount;
+   DBOOL_TYPE              want_newroot_usr_mount;
    unsigned                rootfind_delay;
    unsigned                doshell;
    unsigned                premount_status;

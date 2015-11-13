@@ -288,9 +288,9 @@ static int _initramfs_globals_init_data_structs (
 
 static void _initramfs_globals_zap ( struct initramfs_globals_type* const g ) {
 
-   g->root_ro_status          = -1;
-   g->want_newroot_mount      = -1;
-   g->want_newroot_usr_mount  = -1;
+   g->root_ro_status          = DBOOL_UNDECIDED;
+   g->want_newroot_mount      = DBOOL_UNDECIDED;
+   g->want_newroot_usr_mount  = DBOOL_UNDECIDED;
    g->rootfind_delay          = 0;
    g->doshell                 = INITRAMFS_DOSHELL_DISABLE;
    g->premount_status         = 0x0;

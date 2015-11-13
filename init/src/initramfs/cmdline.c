@@ -11,6 +11,7 @@
 
 #include "../common/mac.h"
 #include "../common/dynarray.h"
+#include "../common/decision_bool.h"
 #include "../common/strutil/convert.h"
 #include "../common/strutil/compare.h"
 #include "../common/strutil/argsplit.h"
@@ -113,14 +114,10 @@ static int _initramfs_postprocess_cmdline (
    struct _cmdline_parse_data* const pshare
 ) {
 
-   switch (pshare->globals->root_ro_status) {
-      case 0:
-         pshare->globals->newroot_mount->flags &= (unsigned long)~MS_RDONLY;
-         break;
-
-      default:
-         pshare->globals->newroot_mount->flags |= MS_RDONLY;
-         break;
+   if ( dbool_is_undef_true(pshare->globals->root_ro_status) ) {
+      pshare->globals->newroot_mount->flags |= MS_RDONLY;
+   } else {
+      pshare->globals->newroot_mount->flags &= (unsigned long)~MS_RDONLY;
    }
 
    if ( mount_config_is_enabled ( pshare->globals->newroot_mount ) == 0 ) {
@@ -473,20 +470,20 @@ static int _initramfs_cmdline_process_arg (
 
       case CMDLINE_KEY_NEWROOT_RO:
          if ( arg->end_of_arg < 0 ) {
-            pshare->globals->root_ro_status = 1;
+            pshare->globals->root_ro_status = DBOOL_TRUE;
             *flow_ctrl = ARGSPLIT_NEXT_ARG;
          }
          break;
 
       case CMDLINE_KEY_NEWROOT_RW:
          if ( arg->end_of_arg < 0 ) {
-            pshare->globals->root_ro_status = 0;
+            pshare->globals->root_ro_status = DBOOL_FALSE;
             *flow_ctrl = ARGSPLIT_NEXT_ARG;
          }
          break;
 
       case CMDLINE_KEY_NEWROOT_NOMOUNT:
-         pshare->globals->want_newroot_mount = 0;
+         pshare->globals->want_newroot_mount = DBOOL_FALSE;
          break;
 
       case CMDLINE_KEY_NEWROOT_SOURCE:
@@ -537,12 +534,12 @@ static int _initramfs_cmdline_process_arg (
             );
 
             if ( retcode == 0 ) {
-               pshare->globals->root_ro_status = 0;
+               pshare->globals->root_ro_status = DBOOL_FALSE;
                mount_config_free_opts ( pshare->globals->newroot_mount );
                mount_config_enable (
                   pshare->globals->newroot_mount, MOUNT_CFG_IS_ENABLED
                );
-               pshare->globals->want_newroot_mount = 1;
+               pshare->globals->want_newroot_mount = DBOOL_TRUE;
             }
          }
 
@@ -554,7 +551,7 @@ static int _initramfs_cmdline_process_arg (
           * pshare->globals->want_newroot_usr_mount can only be disabled,
           * don't bother parsing squashed_usr if it has been disabled
           * */
-         if ( pshare->globals->want_newroot_usr_mount ) {
+         if ( dbool_is_undef_true(pshare->globals->want_newroot_usr_mount) ) {
             retcode = _initramfs_cmdline_process_arg__squashed_usr (
                pshare->globals, arg
             );
@@ -562,7 +559,7 @@ static int _initramfs_cmdline_process_arg (
          break;
 
       case CMDLINE_KEY_USR_SFS_NOMOUNT:
-         pshare->globals->want_newroot_usr_mount = 0;
+         pshare->globals->want_newroot_usr_mount = DBOOL_FALSE;
          break;
 
       case CMDLINE_KEY_ZRAM_SWAP:
@@ -589,7 +586,7 @@ static int _initramfs_cmdline_process_arg (
           * disable want_newroot_mount as it conflicts with liram
           * */
           /* FIXME: newroot_mount supports [z]tmpfs now, no need to disable this. */
-          pshare->globals->want_newroot_mount = 0;
+          pshare->globals->want_newroot_mount = DBOOL_FALSE;
           break;
 
       default:
