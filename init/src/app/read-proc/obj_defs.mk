@@ -5,13 +5,13 @@ ODEF_APP_READ_PROC_HEADERS +=
 $(eval $(call C_OBJ_DEFS,app/read-proc))
 
 PROG__PROC_READ_HEADERS_NAMES   += common/mac
-PROG__PROC_READ_ANY_NAMES       += common/dynarray
+PROG__PROC_READ_ANY_NAMES       += common/data_types/dynarray
 PROG__PROC_READ_ANY_NAMES       += common/message
 PROG__PROC_READ_ANY_NAMES       += common/strutil/join
-PROG__PROC_READ_ANY_NAMES       += common/dynstr
+PROG__PROC_READ_ANY_NAMES       += common/data_types/dynstr
 PROG__PROC_READ_ANY_NAMES       += common/fs/process_info
 PROG__PROC_READ_HEADERS_NAMES   += common/config
-PROG__PROC_READ_ANY_NAMES       += common/str_dynarray
+PROG__PROC_READ_ANY_NAMES       += common/data_types/str_dynarray
 PROG__PROC_READ_ANY_NAMES       += common/strutil/compare
 PROG__PROC_READ_ANY_NAMES       += common/strutil/convert
 PROG__PROC_READ_ANY_NAMES       += common/strutil/format

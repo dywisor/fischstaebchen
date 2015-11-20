@@ -16,7 +16,7 @@
 #include "../hacks.h"
 #include "../premount.h"
 #include "../../common/mac.h"
-#include "../../common/dynarray.h"
+#include "../../common/data_types/dynarray.h"
 #include "../../common/misc/env.h"
 #include "../../common/strutil/compare.h"
 #include "../../common/strutil/join.h"

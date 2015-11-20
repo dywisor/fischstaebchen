@@ -19,9 +19,9 @@
 #include "process_info.h"
 #include "../config.h"
 #include "../mac.h"
-#include "../dynarray.h"
-#include "../str_dynarray.h"
-#include "../dynstr.h"
+#include "../data_types/dynarray.h"
+#include "../data_types/str_dynarray.h"
+#include "../data_types/dynstr.h"
 #include "../strutil/format.h"
 
 

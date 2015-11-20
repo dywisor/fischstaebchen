@@ -16,8 +16,8 @@
 
 #include "mount_opts.h"
 #include "../config.h"
-#include "../dynarray.h"
-#include "../dynstr.h"
+#include "../data_types/dynarray.h"
+#include "../data_types/dynstr.h"
 #include "../strutil/join.h"
 #include "../strutil/compare.h"
 #include "../strutil/format.h"

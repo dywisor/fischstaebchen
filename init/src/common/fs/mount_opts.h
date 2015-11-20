@@ -10,7 +10,7 @@
 
 #include <sys/types.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 /**
  * Creates a mount opts str from an opts str and int flags.

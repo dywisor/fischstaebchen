@@ -11,7 +11,7 @@
 #include "dynarray.h"
 #include "dynstr.h"
 #include "str_dynarray.h"
-#include "mac.h"
+#include "../mac.h"
 
 
 int dynarray_append_dynstr_unref (

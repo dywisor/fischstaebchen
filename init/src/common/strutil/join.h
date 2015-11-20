@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 /**
  * Concatenates an arbitrary number of strings.

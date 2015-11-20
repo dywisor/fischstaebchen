@@ -10,7 +10,7 @@
 #include <sys/types.h>
 
 #include "../common/mac.h"
-#include "../common/dynarray.h"
+#include "../common/data_types/dynarray.h"
 #include "../common/decision_bool.h"
 #include "../common/strutil/convert.h"
 #include "../common/strutil/compare.h"
@@ -430,9 +430,16 @@ static int _initramfs_cmdline_process_arg__squashed_usr (
    struct initramfs_globals_type* const g,
    const struct argsplit_data* const arg
 ) {
-   return _initramfs_cmdline_process_arg__sfsmount_any (
-      g->newroot_usr_mount, arg
-   );
+   if (
+      ( arg->end_of_arg == 0 ) && ( strcmp ( arg->value, "builtin" ) == 0 )
+   ) {
+      dbool_enforce ( g->want_newroot_usr_mount );
+      return 0;
+   } else {
+      return _initramfs_cmdline_process_arg__sfsmount_any (
+         g->newroot_usr_mount, arg
+      );
+   }
 }
 
 static int _initramfs_cmdline_process_arg (

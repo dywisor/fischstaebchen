@@ -16,8 +16,8 @@
 
 #include "fileio.h"
 #include "../mac.h"
-#include "../dynstr.h"
-#include "../dynarray.h"
+#include "../data_types/dynstr.h"
+#include "../data_types/dynarray.h"
 #include "../strutil/join.h"
 #include "../strutil/format.h"
 #include "../strutil/split.h"

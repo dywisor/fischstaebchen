@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 
 enum {

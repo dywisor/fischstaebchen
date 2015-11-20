@@ -16,8 +16,8 @@
 #include <time.h>
 
 #include "run_command.h"
-#include "../dynarray.h"
-#include "../dynstr.h"
+#include "../data_types/dynarray.h"
+#include "../data_types/dynstr.h"
 #include "../message.h"
 #include "../mac.h"
 #include "../strutil/join.h"

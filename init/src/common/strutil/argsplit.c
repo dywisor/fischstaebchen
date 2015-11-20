@@ -11,8 +11,8 @@
 
 #include "argsplit.h"
 #include "split.h"
-#include "../dynarray.h"
-#include "../dynstr.h"
+#include "../data_types/dynarray.h"
+#include "../data_types/dynstr.h"
 
 
 int argsplit_str_do (

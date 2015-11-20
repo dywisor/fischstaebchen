@@ -12,7 +12,7 @@
 
 #include "split.h"
 #include "../mac.h"
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 
 static int _do_str_split (

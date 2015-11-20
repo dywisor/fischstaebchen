@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 #ifndef FILEIO_READFILE_BUFSIZE
 enum { FILEIO_READFILE_BUFSIZE = 80 };

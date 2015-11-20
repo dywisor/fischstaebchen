@@ -13,8 +13,8 @@
 
 #include "join.h"
 #include "../mac.h"
-#include "../dynstr.h"
-#include "../dynarray.h"
+#include "../data_types/dynstr.h"
+#include "../data_types/dynarray.h"
 
 int join_str_pair_to (
    char** const restrict out_str,

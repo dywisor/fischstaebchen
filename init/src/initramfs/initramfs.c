@@ -11,7 +11,7 @@
 
 #include "../common/mac.h"
 #include "../common/message.h"
-#include "../common/dynarray.h"
+#include "../common/data_types/dynarray.h"
 #include "../common/decision_bool.h"
 #include "../common/misc/run_command.h"
 #include "../common/misc/env.h"

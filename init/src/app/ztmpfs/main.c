@@ -15,7 +15,7 @@
 #include "../../common/message.h"
 #include "../../common/fs/constants.h"
 #include "../../common/strutil/compare.h"
-#include "../../common/dynstr.h"
+#include "../../common/data_types/dynstr.h"
 
 #include "../../zram/globals.h"
 #include "../../zram/tmpfs.h"

@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "mac.h"
-#include "message.h"
+#include "../mac.h"
+#include "../message.h"
 #include "dynarray.h"
 
 static inline void _dynarray_free_item_ptr_use_destructor (

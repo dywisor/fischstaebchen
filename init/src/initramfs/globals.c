@@ -16,7 +16,7 @@
 
 #include "../common/mac.h"
 #include "../common/message.h"
-#include "../common/dynarray.h"
+#include "../common/data_types/dynarray.h"
 #include "../common/fs/mount_config.h"
 #include "../common/misc/sysinfo.h"
 #include "../zram/globals.h"

@@ -15,7 +15,7 @@
 #include <sys/types.h>
 
 #include "../common/message.h"
-#include "../common/dynarray.h"
+#include "../common/data_types/dynarray.h"
 #include "../common/decision_bool.h"
 #include "../common/fs/mount_config.h"
 

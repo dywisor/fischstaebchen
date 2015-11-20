@@ -5,11 +5,11 @@ ODEF_APP_PINGLOOP_HEADERS +=
 $(eval $(call C_OBJ_DEFS,app/pingloop))
 
 PROG_PINGLOOP_ANY_NAMES       += common/misc/run_command
-PROG_PINGLOOP_ANY_NAMES       += common/dynarray
+PROG_PINGLOOP_ANY_NAMES       += common/data_types/dynarray
 PROG_PINGLOOP_HEADERS_NAMES   += common/mac
 PROG_PINGLOOP_ANY_NAMES       += common/message
 PROG_PINGLOOP_ANY_NAMES       += common/strutil/join
-PROG_PINGLOOP_ANY_NAMES       += common/dynstr
+PROG_PINGLOOP_ANY_NAMES       += common/data_types/dynstr
 PROG_PINGLOOP_ANY_NAMES       += common/strutil/convert
 PROG_PINGLOOP_ANY_NAMES       += common/strutil/format
 

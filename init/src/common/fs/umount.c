@@ -17,7 +17,7 @@
 
 
 #include "umount.h"
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 #include "../mac.h"
 #include "../message.h"
 #include "../strutil/compare.h"

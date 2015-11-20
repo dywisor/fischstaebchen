@@ -15,7 +15,7 @@
 
 #include "_base.h"
 #include "../../common/mac.h"
-#include "../../common/dynarray.h"
+#include "../../common/data_types/dynarray.h"
 #include "../../common/fs/process_info.h"
 #include "../../common/strutil/compare.h"
 #include "../../common/strutil/convert.h"

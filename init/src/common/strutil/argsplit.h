@@ -10,7 +10,7 @@
 
 #include <sys/types.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 
 /** argsplit status */
 enum {

@@ -19,7 +19,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "../dynarray.h"
+#include "../data_types/dynarray.h"
 #include "../message.h"
 #include "../config.h"
 

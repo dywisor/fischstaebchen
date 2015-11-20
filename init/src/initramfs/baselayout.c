@@ -37,7 +37,7 @@
 #include "../common/strutil/join.h"
 
 #include "../common/mac.h"
-#include "../common/dynarray.h"
+#include "../common/data_types/dynarray.h"
 
 #include "baselayout.h"
 #include "config.h"
