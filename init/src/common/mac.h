@@ -59,12 +59,13 @@
 #pragma GCC diagnostic ignored "-Wundef"
 #if FREE_CHECK_NULL
 #pragma GCC diagnostic pop
-
-#define x_free(ptr)   DO_ONCE ( \
-   { if ( ptr != NULL ) { free(ptr); ptr = NULL; } } )
+#define x_free_data(ptr)  DO_ONCE ( { if ( ptr != NULL ) { free(ptr); } } )
 #else
-#define x_free(ptr)   DO_ONCE ( { free(ptr); ptr = NULL; } )
+#define x_free_data(ptr)  DO_ONCE ( { free(ptr); } )
 #endif
+
+#define x_free(ptr)   DO_ONCE ( { x_free_data(ptr); ptr = NULL; } )
+
 
 #define x_free_arr_items(arr,len)  \
    DO_ONCE ( \
@@ -144,5 +145,9 @@
     } while (0)
 
 #define X_PRESERVE_ERRNO(...)  X_PRESERVE_ERRNO_AS(esav, __VA_ARGS__)
+
+
+#define IF_NULL_FALLBACK(var, fallback)  \
+    ( ((var) != NULL) ? (var) : (fallback) )
 
 #endif /* _COMMON_MAC_H_ */
