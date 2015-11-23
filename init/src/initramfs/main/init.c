@@ -15,6 +15,7 @@
 #include "../baselayout.h"
 #include "../hacks.h"
 #include "../premount.h"
+#include "../run-flags.h"
 #include "../../common/mac.h"
 #include "../../common/data_types/dynarray.h"
 #include "../../common/misc/env.h"
@@ -45,20 +46,6 @@ static int _initramfs_hacks_override_init_prog (
       return read_sysfs_file ( read_from, &(initramfs_globals->real_init) );
    }
    return 0;
-}
-
-static int has_flagfile ( const char* const name ) {
-   int   retcode;
-   char* flagfile;
-
-   RETFAIL_IF_NULL (
-      flagfile = join_str_pair ( ( INITRAMFS_RUN_CONFDIR "/" ), name )
-   );
-
-   retcode = ( access ( flagfile, F_OK ) == 0 );
-
-   x_free ( flagfile );
-   return retcode;
 }
 
 static int have_modules_dir (void) {
@@ -135,7 +122,7 @@ static int main_init (void) {
 
    if ( initramfs_run_hook ( "net-ifup", 1, &found_hook ) == 0 ) {
       if (
-         ( found_hook != 0 ) && ( has_flagfile ( "have-net" ) > 0 )
+         ( found_hook != 0 ) && ( ishare_has_flag ( "have-net" ) )
       ) {
          initramfs_globals->have_network = 1;
       } else {
@@ -170,7 +157,7 @@ static int main_init (void) {
 
    IRUN ( "early initramfs aux mounts", aux_premount("early") );
 
-   if ( has_flagfile ( "no-mount-root" ) < 1 ) {
+   if ( ishare_has_not_flag ( "no-mount-root" ) ) {
       IRUN ( "mount / in newroot", initramfs_mount_newroot_root() );
    } else {
       initramfs_debug (
@@ -182,8 +169,8 @@ static int main_init (void) {
    IRUN_CRITICAL_HOOK ( "mount-newroot" );
 
    if (
-      ( has_flagfile ( "no-mount-usr" ) < 1 ) &&
-      ( has_flagfile ( "want-squashed-usr" ) < 1 )
+      ishare_has_not_flag ( "no-mount-usr" ) &&
+      ishare_has_not_flag ( "want-squashed-usr" )
    ) {
       IRUN ( "mount /usr in newroot", initramfs_mount_newroot_usr() );
    } else {
@@ -209,7 +196,7 @@ static int main_init (void) {
 
    IRUN ( "newroot basemounts", initramfs_newroot_basemounts() );
 
-   if ( has_flagfile ( "no-premount" ) < 1 ) {
+   if ( ishare_has_not_flag ( "no-premount" ) ) {
       IRUN ( "newroot fstab premount", initramfs_newroot_premount(NULL) );
    } else {
       initramfs_debug (
@@ -219,7 +206,7 @@ static int main_init (void) {
    }
 
    /* mount /tmp in newroot if not already done */
-   if ( has_flagfile ( "no-mount-tmpdir" ) < 1 ) {
+   if ( ishare_has_not_flag ( "no-mount-tmpdir" ) ) {
       IRUN ( "newroot mount tmpdir", initramfs_mount_newroot_tmpdir() );
    } else {
       initramfs_debug (
@@ -231,7 +218,7 @@ static int main_init (void) {
    /* set up user tmpdirs
     * (per-uid, with user names symlinked to the uid dirs)
     * */
-   if ( has_flagfile ( "no-user-tmpdirs" ) < 1 ) {
+   if ( ishare_has_not_flag ( "no-user-tmpdirs" ) ) {
       IRUN ( "newroot tmpdir setup", initramfs_setup_newroot_tmpdir() );
    } else {
       initramfs_debug (
