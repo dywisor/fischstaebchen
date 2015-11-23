@@ -16,19 +16,33 @@
 #include "baseops.h"
 #include "fileio.h"
 
+static inline int _pseudo_touch_file__do_create_file (
+   const char* const filepath, const mode_t filemode
+);
+
+
 
 int pseudo_touch_file (
    const char* const filepath, const mode_t filemode
 ) {
    if ( access ( filepath, F_OK ) == 0 ) { return 0; }
-   return write_text_file ( filepath, NULL, O_CREAT|O_APPEND, filemode );
+   return _pseudo_touch_file__do_create_file ( filepath, filemode );
 }
 
 int pseudo_touch_file_makedirs (
    const char* const filepath, const mode_t filemode
 ) {
-   if ( access ( filepath, F_OK ) == 0 ) { return 0; }
-   /* unchecked retcode, leave it up to write_text_file() */
+   if ( pseudo_touch_file ( filepath, filemode ) == 0 ) { return 0; }
+   /* unchecked retcode, leave it up to pseudo_touch_file() */
    makedirs_parents ( filepath, DEFDIRPERM );
+   return _pseudo_touch_file__do_create_file ( filepath, filemode );
+}
+
+
+
+
+static inline int _pseudo_touch_file__do_create_file (
+   const char* const filepath, const mode_t filemode
+) {
    return write_text_file ( filepath, NULL, O_CREAT|O_APPEND, filemode );
 }
