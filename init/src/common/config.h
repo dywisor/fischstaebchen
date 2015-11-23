@@ -112,6 +112,20 @@
 #endif
 
 
+/* misc fs */
+#ifndef DEFAULT_SEARCH_PATH_SEP
+#define DEFAULT_SEARCH_PATH_SEP  ":"
+#endif
+
+#ifndef DEFAULT_SEARCH_PATHEXT_SEP
+#define DEFAULT_SEARCH_PATHEXT_SEP  DEFAULT_SEARCH_PATH_SEP
+#endif
+
+#ifndef DEFAULT_SEARCH_PATHEXT
+#define DEFAULT_SEARCH_PATHEXT  NULL
+#endif
+
+
 /* load POST_LOCALCONFIG */
 #ifdef POST_LOCALCONFIG
 #define __get_header(h) #h

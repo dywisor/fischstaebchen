@@ -13,5 +13,6 @@
 #include "misc/run_command.h"
 #include "misc/sysinfo.h"
 #include "misc/kver.h"
+#include "misc/which.h"
 
 #endif
