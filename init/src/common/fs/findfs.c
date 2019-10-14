@@ -115,7 +115,7 @@ static void _process_line ( char* const line ) {
          case '\r':
             do {
                *(iter++) = '\0';
-            } while ( iter != '\0' );
+            } while ( *iter != '\0' );
 
             return;
 
